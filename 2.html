@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>全能调式识别器 (含声音识别)</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --bg-color: #F2F2F7;
+            --key-active-color: #34C759;
+            --mic-active-color: #FF3B30;
+            --text-main: #1C1C1E;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        .header {
+            padding: 10px 15px;
+            background: #fff;
+            box-shadow: 0 1px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .header h1 { font-size: 16px; font-weight: 700; }
+
+        /* 顶部控制台：查询 + 麦克风 */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 6px;
+            background: #f8f8f8;
+            padding: 8px;
+            border-radius: 10px;
+        }
+
+        select, .btn {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+            background: white;
+            outline: none;
+        }
+
+        .btn {
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .apply-btn { background: var(--primary-color); color: white; }
+        .reset-btn { background: #E5E5EA; color: #333; }
+        .mic-btn { background: #fff; border: 1px solid #ddd; color: #333; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .mic-btn.active { background: var(--mic-active-color); color: white; border-color: var(--mic-active-color); animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* 识别结果区 */
+        .display-area {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            align-content: flex-start;
+        }
+
+        .empty-prompt {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #8E8E93;
+            margin-top: 30px;
+            font-size: 13px;
+        }
+
+        .status-bar {
+            text-align: center;
+            font-size: 11px;
+            color: var(--mic-active-color);
+            height: 15px;
+            margin-bottom: 5px;
+        }
+
+        .mode-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            border: 1px solid #E5E5EA;
+        }
+
+        .mode-name { font-size: 12px; font-weight: 700; margin-bottom: 6px; text-align: center; }
+        .staff-svg { width: 100%; height: auto; background: #fdfdfd; border-radius: 4px; }
+
+        /* 键盘区 */
+        .keyboard-area {
+            height: 200px;
+            background: #111;
+            position: relative;
+            display: flex;
+            padding: 0 2px 10px 2px;
+            border-top: 2px solid #333;
+        }
+
+        .key { position: relative; cursor: pointer; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 10px; font-weight: 600; }
+        .key.white { flex: 1; background: #fff; border: 1px solid #ccc; border-radius: 0 0 5px 5px; z-index: 1; color: #888; font-size: 10px; }
+        .key.white.active { background: var(--key-active-color); color: #fff; border-color: var(--key-active-color); }
+        .key.black { 
+            position: absolute; width: 9%; height: 60%; background: #222; z-index: 2; 
+            transform: translateX(-50%); border-radius: 0 0 4px 4px; color: #fff; font-size: 8px; 
+            box-shadow: inset 0 -3px 0 rgba(255,255,255,0.1);
+        }
+        .key.black.active { background: var(--key-active-color); box-shadow: none; }
+
+        .black.c-sharp { left: 14.28%; } .black.d-sharp { left: 28.57%; }
+        .black.f-sharp { left: 57.14%; } .black.g-sharp { left: 71.42%; } .black.a-sharp { left: 85.71%; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-top">
+            <h1>调式识别 & 声音分析</h1>
+            <button class="btn reset-btn" id="resetBtn">清空</button>
+        </div>
+        
+        <div class="controls-grid">
+            <select id="rootSelect"></select>
+            <select id="typeSelect"></select>
+            <button class="btn apply-btn" id="applyBtn">查询</button>
+            <button class="btn mic-btn" id="micBtn" style="grid-column: span 3;">
+                <span>🎤 开启麦克风识别</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="status-bar" id="micStatus"></div>
+
+    <div class="display-area" id="displayArea">
+        <div class="empty-prompt">弹奏键盘或唱歌，我将识别调式</div>
+    </div>
+
+    <div class="keyboard-area">
+        <div class="key white" data-note="0">C</div>
+        <div class="key white" data-note="2">D</div>
+        <div class="key white" data-note="4">E</div>
+        <div class="key white" data-note="5">F</div>
+        <div class="key white" data-note="7">G</div>
+        <div class="key white" data-note="9">A</div>
+        <div class="key white" data-note="11">B</div>
+        <div class="key black c-sharp" data-note="1">C#</div>
+        <div class="key black d-sharp" data-note="3">D#</div>
+        <div class="key black f-sharp" data-note="6">F#</div>
+        <div class="key black g-sharp" data-note="8">G#</div>
+        <div class="key black a-sharp" data-note="10">A#</div>
+    </div>
+
+<script>
+    // --- 1. 核心乐理数据 ---
+    const MAJOR_KEY_SIGS = { 0:0, 7:1, 2:2, 9:3, 4:4, 11:5, 6:6, 5:-1, 10:-2, 3:-3, 8:-4, 1:-5 };
+    const scaleTypes = [
+        { name: '大调 (Ionian)', intervals: [0, 2, 4, 5, 7, 9, 11], rootOffset: 0 },
+        { name: '自然小调 (Aeolian)', intervals: [0, 2, 3, 5, 7, 8, 10], rootOffset: 3 },
+        { name: '和声小调', intervals: [0, 2, 3, 5, 7, 8, 11], rootOffset: 3 },
+        { name: 'Dorian', intervals: [0, 2, 3, 5, 7, 9, 10], rootOffset: 10 },
+        { name: 'Mixolydian', intervals: [0, 2, 4, 5, 7, 9, 10], rootOffset: 5 }
+    ];
+
+    const noteNamesSharp = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+    const noteNamesFlat = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+    const USE_FLATS = [5, 10, 3, 8, 1]; 
+
+    const allScales = [];
+    for (let r = 0; r < 12; r++) {
+        const useFlat = USE_FLATS.includes(r);
+        const names = useFlat ? noteNamesFlat : noteNamesSharp;
+        scaleTypes.forEach((type, tIdx) => {
+            const majorRoot = (r + type.rootOffset) % 12;
+            const sigCount = MAJOR_KEY_SIGS[majorRoot] || 0;
+            allScales.push({
+                root: r, typeName: type.name, fullName: `${names[r]} ${type.name}`,
+                notes: type.intervals.map(i => (r + i) % 12), sig: sigCount
+            });
+        });
+    }
+
+    // --- 2. 初始化 UI ---
+    const rootSelect = document.getElementById('rootSelect');
+    const typeSelect = document.getElementById('typeSelect');
+    const displayArea = document.getElementById('displayArea');
+    const micStatus = document.getElementById('micStatus');
+    const keys = document.querySelectorAll('.key');
+
+    noteNamesSharp.forEach((name, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = name; rootSelect.appendChild(opt);
+    });
+    scaleTypes.forEach((type, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = type.name; typeSelect.appendChild(opt);
+    });
+
+    // --- 3. 绘图逻辑 ---
+    function createKeySigSVG(sigCount) {
+        const NS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("viewBox", "0 0 200 80");
+        svg.classList.add("staff-svg");
+        for (let i = 0; i < 5; i++) {
+            const line = document.createElementNS(NS, "line");
+            const y = 20 + i * 10;
+            line.setAttribute("x1", "0"); line.setAttribute("y1", y); line.setAttribute("x2", "200"); line.setAttribute("y2", y);
+            line.setAttribute("stroke", "#000"); svg.appendChild(line);
+        }
+        const clef = document.createElementNS(NS, "text");
+        clef.setAttribute("x", "10"); clef.setAttribute("y", "52");
+        clef.setAttribute("font-size", "45px"); clef.textContent = "𝄞"; svg.appendChild(clef);
+
+        const isSharp = sigCount > 0;
+        const count = Math.abs(sigCount);
+        const symbol = isSharp ? "♯" : "♭";
+        const yCoords = isSharp ? [25, 40, 20, 35, 50, 30, 45] : [35, 25, 40, 30, 45, 35, 50];
+        for (let i = 0; i < count; i++) {
+            const txt = document.createElementNS(NS, "text");
+            txt.setAttribute("x", 55 + i * 12); txt.setAttribute("y", yCoords[i]);
+            txt.setAttribute("font-size", "22px"); txt.setAttribute("font-weight", "bold");
+            txt.textContent = symbol; svg.appendChild(txt);
+        }
+        return svg;
+    }
+
+    // --- 4. 声音识别逻辑 (Pitch Detection) ---
+    let audioCtx = null;
+    let analyser = null;
+    let micStream = null;
+    let isListening = false;
+    const BUFSIZE = 2048;
+    const buf = new Float32Array(BUFSIZE);
+
+    async function toggleMic() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        if (isListening) {
+            isListening = false;
+            micBtn.classList.remove('active');
+            micBtn.querySelector('span').textContent = "🎤 开启麦克风识别";
+            micStatus.textContent = "";
+            if (micStream) micStream.getTracks().forEach(t => t.stop());
+            return;
+        }
+
+        try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioCtx.createMediaStreamSource(micStream);
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = BUFSIZE;
+            source.connect(analyser);
+            
+            isListening = true;
+            micBtn.classList.add('active');
+            micBtn.querySelector('span').textContent = "🛑 停止识别";
+            updatePitch();
+        } catch (err) {
+            alert("无法访问麦克风。请确保在 HTTPS 环境或 Localhost 下运行。");
+        }
+    }
+
+    // 自相关算法：检测音高频率
+    function autoCorrelate(buf, sampleRate) {
+        let SIZE = buf.length;
+        let rms = 0;
+        for (let i=0; i<SIZE; i++) rms += buf[i]*buf[i];
+        rms = Math.sqrt(rms/SIZE);
+        if (rms < 0.01) return -1; // 音量太小
+
+        let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+        for (let i=0; i<SIZE/2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; }
+        for (let i=1; i<SIZE/2; i++) if (Math.abs(buf[SIZE-i]) < thres) { r2 = SIZE-i; break; }
+        buf = buf.slice(r1, r2);
+        SIZE = buf.length;
+
+        let c = new Float32Array(SIZE);
+        for (let i=0; i<SIZE; i++)
+            for (let j=0; j<SIZE-i; j++) c[i] = c[i] + buf[j]*buf[j+i];
+
+        let d = 0; while (c[d] > c[d+1]) d++;
+        let maxval = -1, maxpos = -1;
+        for (let i=d; i<SIZE; i++) {
+            if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+        }
+        let T0 = maxpos;
+        return sampleRate / T0;
+    }
+
+    function updatePitch() {
+        if (!isListening) return;
+        analyser.getFloatTimeDomainData(buf);
+        const freq = autoCorrelate(buf, audioCtx.sampleRate);
+
+        if (freq !== -1 && freq > 80 && freq < 1000) {
+            // 频率转音符索引 (C4 = 60 MIDI)
+            const noteNum = 12 * (Math.log(freq / 440) / Math.log(2)) + 69;
+            const noteIdx = Math.round(noteNum) % 12;
+            
+            micStatus.textContent = `检测到音高: ${noteNamesSharp[noteIdx]} (${Math.round(freq)}Hz)`;
+            
+            // 如果这个音没被选中，自动选中它
+            if (!selectedNotes.has(noteIdx)) {
+                selectNote(noteIdx);
+            }
+        }
+        requestAnimationFrame(updatePitch);
+    }
+
+    // --- 5. 交互逻辑 ---
+    let selectedNotes = new Set();
+
+    function selectNote(idx) {
+        selectedNotes.add(idx);
+        const key = document.querySelector(`.key[data-note="${idx}"]`);
+        if (key) key.classList.add('active');
+        updateUI();
+    }
+
+    function updateUI() {
+        if (selectedNotes.size === 0) {
+            displayArea.innerHTML = '<div class="empty-prompt">弹奏键盘或唱歌，我将识别调式</div>';
+            return;
+        }
+        const matched = allScales.filter(s => [...selectedNotes].every(n => s.notes.includes(n)));
+        displayArea.innerHTML = matched.length ? '' : '<div class="empty-prompt">无匹配调式</div>';
+        matched.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'mode-card';
+            card.innerHTML = `<div class="mode-name">${s.fullName}</div>`;
+            card.appendChild(createKeySigSVG(s.sig));
+            displayArea.appendChild(card);
+        });
+    }
+
+    // 钢琴点击
+    keys.forEach(key => {
+        key.addEventListener('mousedown', function() {
+            const idx = parseInt(this.getAttribute('data-note'));
+            if (selectedNotes.has(idx)) {
+                selectedNotes.delete(idx);
+                this.classList.remove('active');
+            } else {
+                selectedNotes.add(idx);
+                this.classList.add('active');
+                // 播放一个简单的提示音
+                playTone(261.63 * Math.pow(2, idx / 12));
+            }
+            updateUI();
+        });
+    });
+
+    function playTone(freq) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.frequency.value = freq;
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.8);
+    }
+
+    // 按钮事件
+    document.getElementById('micBtn').addEventListener('click', toggleMic);
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        selectedNotes.clear();
+        keys.forEach(k => k.classList.remove('active'));
+        updateUI();
+    });
+    document.getElementById('applyBtn').addEventListener('click', () => {
+        const root = parseInt(rootSelect.value);
+        const typeIdx = parseInt(typeSelect.value);
+        const scale = allScales.find(s => s.root === root && s.typeName === scaleTypes[typeIdx].name);
+        if (scale) {
+            selectedNotes = new Set(scale.notes);
+            keys.forEach(k => {
+                const n = parseInt(k.getAttribute('data-note'));
+                selectedNotes.has(n) ? k.classList.add('active') : k.classList.remove('active');
+            });
+            updateUI();
+        }
+    });
+</script>
+</body>
+</html>
