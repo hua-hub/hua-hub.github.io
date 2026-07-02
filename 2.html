@@ -243,7 +243,7 @@
         const isSharp = sigCount > 0;
         const count = Math.abs(sigCount);
         const symbol = isSharp ? "♯" : "♭";
-        const yCoords = isSharp ? [25, 40, 20, 35, 50, 30, 45] : [35, 25, 40, 30, 45, 35, 50];
+        const yCoords = isSharp ? [27, 42, 22, 37, 52, 32, 47] : [45, 30, 50, 35, 55, 40, 60];
         for (let i = 0; i < count; i++) {
             const txt = document.createElementNS(NS, "text");
             txt.setAttribute("x", 55 + i * 12); txt.setAttribute("y", yCoords[i]);
