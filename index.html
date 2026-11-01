@@ -1,84 +1,66 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的项目主页</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 20px;
-            background-color: #f4f4f9;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的项目主页</title>
+<style>
+  :root{
+    --bg:#f6f6f4; --card:#fff; --text:#1a1a1a; --muted:#999; --border:#e6e6e1; --hover:#3498db;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121212; --card:#1e1e1e; --text:#f2f2f2; --muted:#888; --border:#2d2d2d; }
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.6;
+  }
 
-        header {
-            text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
+  /* 内容列：电脑/平板居中限制宽度，手机占满，三端同一种竖排布局 */
+  main{ max-width:680px; margin:0 auto; padding:48px 20px 32px; }
+  h1{ font-size:26px; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 24px; }
 
-        section {
-            background: #fff;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+  /* 每行一个，整行可点 */
+  ul{ list-style:none; padding:0; margin:0; }
+  li{ margin:0 0 10px; }
+  li a{
+    display:flex; justify-content:space-between; align-items:center;
+    min-height:56px; padding:14px 18px;
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    color:inherit; text-decoration:none; font-weight:600; font-size:17px;
+    word-break:break-all; -webkit-tap-highlight-color:transparent;
+  }
+  li a::after{ content:"\203A"; color:var(--muted); font-size:22px; margin-left:12px; flex:none; }
+  li a:hover, li a:active{ border-color:var(--hover); color:var(--hover); }
 
-        h2 {
-            color: #2c3e50;
-            margin-top: 0;
-        }
+  footer{ text-align:center; color:var(--muted); font-size:.85em; margin-top:36px; }
 
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-
-        li {
-            margin: 10px 0;
-        }
-
-        a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        a:hover {
-            text-decoration: underline;
-            color: #2980b9;
-        }
-    </style>
+  @media (max-width:600px){
+    main{ padding:32px 16px 24px; }
+    h1{ font-size:24px; }
+    li a{ padding:16px; }
+  }
+</style>
 </head>
-
 <body>
+<main>
+  <h1>欢迎回来</h1>
+  <p class="sub">请选择你要访问的模块</p>
 
-    <header>
-        <h1>欢迎回来！请选择你要访问的模块：</h1>
-    </header>
+  <ul id="nav">
+    <!-- AUTO:START -->
+    <li><a href="Muse-公式练习器.html">Muse-公式练习器</a></li>
+    <li><a href="Muse-十字交互训练器.html">Muse-十字交互训练器</a></li>
+    <li><a href="一天时间分布图.html">一天时间分布图</a></li>
+    <li><a href="钢琴调式1.html">钢琴调式1</a></li>
+    <li><a href="钢琴调式2.html">钢琴调式2</a></li>
+    <li><a href="钢琴调式3.html">钢琴调式3</a></li>
+    <!-- AUTO:END -->
+  </ul>
 
-    <section>
-        <ul>
-            <li><a href="1.html">查看 1.html</a></li>
-            <li><a href="2.html">查看 2.html</a></li>
-            <li><a href="3.html">查看 3.html</a></li>
-            <li><a href="dayschedule.html">查看 dayschedule.html</a></li>
-        </ul>
-    </section>
-
-    <hr>
-    <footer>
-        <p style="text-align: center; color: #888; font-size: 0.9em;">
-            &copy; 2026 我的本地工作站
-        </p>
-    </footer>
-
+  <footer>&copy; 2026 我的本地工作站</footer>
+</main>
 </body>
-
 </html>
