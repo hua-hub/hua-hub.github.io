@@ -155,8 +155,16 @@
   .pat-cloud{ background:radial-gradient(circle at 80% 14%, rgba(255,240,190,.55), rgba(255,240,190,0) 44%), linear-gradient(155deg,#5b8fd6 0%,#8fc3ee 55%,#3a6db0 100%); }
   .pat-heart{ background:radial-gradient(circle at 18% 16%, rgba(255,210,225,.5), rgba(255,210,225,0) 44%), linear-gradient(155deg,#a02c5e 0%,#d64570 55%,#701c44 100%); }
   .pat-flower{ background:radial-gradient(circle at 84% 82%, rgba(255,240,170,.5), rgba(255,240,170,0) 44%), linear-gradient(155deg,#7a4fa3 0%,#b07cc9 55%,#4e2a72 100%); }
+  .pat-balloon{ background:radial-gradient(circle at 22% 16%, rgba(255,255,255,.55), rgba(255,255,255,0) 46%), linear-gradient(155deg,#4a9fd8 0%,#8fcbf0 55%,#2f78b8 100%); }
+  .pat-panda{ background:radial-gradient(circle at 84% 14%, rgba(255,255,220,.4), rgba(255,255,220,0) 44%), linear-gradient(155deg,#3d9950 0%,#6cb877 55%,#27663a 100%); }
+  .pat-cat{ background:radial-gradient(circle at 20% 16%, rgba(255,240,200,.55), rgba(255,240,200,0) 44%), linear-gradient(155deg,#d97c1e 0%,#f2a541 55%,#b35f14 100%); }
+  .pat-strawberry{ background:radial-gradient(circle at 82% 14%, rgba(255,220,225,.5), rgba(255,220,225,0) 44%), linear-gradient(155deg,#c22438 0%,#e84a5f 55%,#8f1626 100%); }
+  .pat-rocket{ background:radial-gradient(circle at 78% 88%, rgba(255,150,60,.55), rgba(255,150,60,0) 48%), radial-gradient(circle at 18% 14%, rgba(160,170,255,.4), rgba(160,170,255,0) 44%), linear-gradient(155deg,#2a3565 0%,#44539c 55%,#1a2247 100%); }
+  .pat-fish{ background:radial-gradient(circle at 84% 12%, rgba(200,245,255,.5), rgba(200,245,255,0) 45%), linear-gradient(155deg,#1778b8 0%,#35a3cc 55%,#0d5a80 100%); }
   .face.front{ transform:rotateY(180deg); border:2px solid rgba(255,255,255,.85); padding:0; }
   .face.front .glyph{ font-size:64cqw; line-height:1.05; filter:drop-shadow(0 3px 4px rgba(0,0,0,.18)); }
+  .face.front .glyph.txt{ font-size:58cqw; font-weight:900; }
+  .face.front .glyph.txt2{ font-size:44cqw; font-weight:900; }
   .face.front .lbl{ font-size:12.5cqw; font-weight:700; color:rgba(38,50,56,.78); line-height:1.2; margin-top:1cqw; }
   @media (prefers-color-scheme: dark){ .face.front .lbl{ color:rgba(20,26,32,.8); } }
   @container (max-width:66px){ .face.front .glyph{ font-size:62cqw; } .face.front .lbl{ font-size:11.5cqw; margin-top:0; } .face.back .hint{ display:none; } }
@@ -191,7 +199,8 @@
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
   /* ---------- 弹层 ---------- */
-  .sheet-back{ position:fixed; inset:0; z-index:50; background:rgba(23,32,40,.45); backdrop-filter:blur(4px); display:flex; align-items:flex-end; justify-content:center; padding:0; }
+  .sheet-back{ position:fixed; inset:0; z-index:50; background:rgba(23,32,40,.45); backdrop-filter:blur(4px); display:flex; align-items:flex-end; justify-content:center; padding:0; transition:opacity .18s ease, visibility .18s; }
+  .sheet-back.fx-hidden{ opacity:0; visibility:hidden; pointer-events:none; }
   @media (min-width:640px){ .sheet-back{ align-items:center; padding:20px; } }
   .sheet{ background:var(--panel-solid); color:var(--ink); width:100%; max-width:560px; max-height:92dvh; overflow-y:auto; border-radius:26px 26px 0 0; padding:20px 20px calc(18px + env(safe-area-inset-bottom)); box-shadow:var(--shadow); }
   @media (min-width:640px){ .sheet{ border-radius:26px; } }
@@ -213,6 +222,8 @@
   .seg.c2{ grid-template-columns:repeat(2,1fr); }
   .seg.c3{ grid-template-columns:repeat(3,1fr); }
   .seg.c4{ grid-template-columns:repeat(4,1fr); }
+  .seg.c5{ grid-template-columns:repeat(5,1fr); }
+  .seg.c5 button{ font-size:11.5px; line-height:1.2; }
   .seg button{ border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); border-radius:12px; padding:6px 4px; font-size:13.5px; font-weight:700; min-height:40px; }
   .seg button small{ display:block; font-size:10.5px; font-weight:500; color:var(--ink-soft); margin-top:1px; }
   .seg button.sel{ border-color:var(--gold); background:rgba(233,161,59,.16); }
@@ -233,7 +244,17 @@
   .switch[aria-pressed="true"]::after{ left:23px; }
   .switch:disabled{ opacity:.35; }
   .switch-grid{ display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-  @media (max-width:430px){ .switch-grid{ grid-template-columns:1fr; } .switch-grid .switch-row{ min-height:40px; padding:4px 10px; } }
+  .switch-grid .switch-row{ min-height:38px; padding:4px 8px; gap:6px; }
+  .switch-grid .sw-txt b{ font-size:12.5px; line-height:1.25; }
+  .switch-grid .switch{ width:42px; height:25px; min-height:25px; }
+  .switch-grid .switch::after{ width:17px; height:17px; }
+  .switch-grid .switch[aria-pressed="true"]::after{ left:19px; }
+  @media (max-height:760px){
+    #panel-kids{ gap:6px; }
+    #panel-kids .switch-row{ min-height:38px; padding:4px 10px; }
+    #panel-kids .seg.tight button{ min-height:32px; }
+    #panel-kids .group > .glabel{ margin-bottom:3px; }
+  }
   /* 预览滑杆 */
   .slider-row{ display:flex; align-items:center; gap:10px; background:var(--chip); border:1px solid var(--panel-line); border-radius:12px; padding:8px 12px; }
   .slider-row input[type="range"]{ flex:1; min-height:2rem; accent-color:var(--gold); }
@@ -241,6 +262,54 @@
   .quick-row{ display:flex; gap:6px; margin-top:6px; }
   .quick-row button{ flex:1; border:2px solid var(--panel-line); background:transparent; color:var(--ink); border-radius:10px; font-size:12.5px; font-weight:700; min-height:32px; padding:3px; }
   .quick-row button.sel{ border-color:var(--gold); background:rgba(233,161,59,.16); }
+
+  /* 外观 Tab：摘要行 */
+  .look-row{ display:flex; align-items:center; gap:10px; background:var(--chip); border:1px solid var(--panel-line); border-radius:12px; padding:7px 10px; min-height:58px; }
+  .look-thumb{ width:44px; height:44px; flex:0 0 auto; border-radius:10px; background:rgba(233,161,59,.14); display:flex; align-items:center; justify-content:center; font-size:25px; overflow:hidden; }
+  .look-info{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .look-label{ font-size:11px; font-weight:800; letter-spacing:.08em; color:var(--ink-soft); }
+  .look-value{ font-size:15.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .look-change{ flex:0 0 auto; border:2px solid var(--gold); background:rgba(233,161,59,.16); color:var(--ink); border-radius:999px; padding:6px 16px; font-size:13.5px; font-weight:800; min-height:38px; }
+  .look-change:active{ transform:scale(.95); }
+  .mini-card{ display:flex; align-items:center; justify-content:center; width:32px; height:38px; border-radius:7px; overflow:hidden; border:1.5px solid rgba(255,235,180,.55); box-shadow:0 3px 8px rgba(60,30,5,.25); }
+  .mini-card svg.motif{ width:66%; height:auto; }
+
+  /* 全屏选择器层：一屏排完、不滚动不裁切 */
+  .picker-back{ position:fixed; inset:0; z-index:70; background:var(--panel-solid); color:var(--ink); display:flex; flex-direction:column; padding:calc(10px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom)); }
+  .picker-head{ flex:0 0 auto; display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .picker-head h3{ flex:1; margin:0; font-size:18px; letter-spacing:.03em; }
+  .picker-close{ width:38px; height:38px; min-height:38px; flex:0 0 auto; border-radius:50%; border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); font-size:15px; font-weight:800; line-height:1; }
+  .picker-grid{ flex:1 1 auto; min-height:0; display:grid; gap:6px; }
+  .theme-grid{ grid-template-columns:repeat(3,1fr); grid-auto-rows:1fr; }
+  .back-grid{ grid-template-columns:repeat(4,1fr); grid-auto-rows:1fr; }
+  @media (min-width:640px){
+    .theme-grid{ grid-template-columns:repeat(4,1fr); }
+    .back-grid{ grid-template-columns:repeat(5,1fr); }
+  }
+  .pick-chip{ min-height:0; border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); border-radius:12px; display:flex; align-items:center; justify-content:center; gap:5px; font-size:12.5px; font-weight:700; padding:4px; line-height:1.25; text-align:center; overflow:hidden; }
+  .pick-chip .pc-emoji{ font-size:17px; flex:0 0 auto; }
+  .pick-chip.sel{ border-color:var(--gold); background:rgba(233,161,59,.18); }
+  .pick-chip:active{ transform:scale(.96); }
+  .back-chip{ flex-direction:column; gap:4px; font-size:11.5px; }
+  .back-chip .mini-card{ width:30px; height:36px; }
+  .back-chip .pc-dice{ font-size:26px; line-height:36px; }
+
+  /* 特效预览舞台：最顶层、全屏透明、不被设置层裁剪 */
+  #fxStage{ position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center; background:rgba(18,28,38,.14); }
+  .fx-stage-inner{ display:flex; flex-direction:column; align-items:center; gap:16px; padding:20px; }
+  .fx-demo-score{ background:var(--panel-solid); color:var(--ink); border:2px solid var(--gold); border-radius:999px; padding:7px 20px; font-size:19px; font-weight:900; box-shadow:var(--shadow); font-variant-numeric:tabular-nums; }
+  .fx-demo-pair{ display:flex; gap:14px; }
+  .fx-demo-card{ width:96px; height:114px; border-radius:16px; border:2.5px solid var(--gold); background:linear-gradient(160deg,#fff7e0,#ffe3ae); display:flex; align-items:center; justify-content:center; box-shadow:0 14px 34px rgba(60,30,5,.35), 0 0 0 4px rgba(233,161,59,.35); }
+  .fx-demo-glyph{ font-size:56px; line-height:1; filter:drop-shadow(0 3px 4px rgba(0,0,0,.18)); }
+  @media (prefers-reduced-motion: no-preference){
+    .fx-demo-card.pop{ animation:demopop .85s ease; }
+    @keyframes demopop{ 0%{ transform:scale(1);} 30%{ transform:scale(1.42) rotate(-4deg);} 55%{ transform:scale(1.24) rotate(4deg);} 75%{ transform:scale(1.34) rotate(-2deg);} 100%{ transform:scale(1);} }
+  }
+  .fx-stage-hint{ background:rgba(30,38,44,.85); color:#fff8ea; font-size:13px; font-weight:700; padding:7px 16px; border-radius:999px; }
+  body.fx-previewing #fxLayer{ z-index:101; }
+  body.fx-previewing .mascot{ z-index:102; }
+  body.fx-previewing #bigWord{ z-index:103; }
+  body.fx-previewing .fx-star{ z-index:104; }
 
   .primary{ width:100%; border:0; border-radius:16px; padding:13px; font-size:17px; font-weight:900; letter-spacing:.06em; color:#fff; background:linear-gradient(120deg,#ef5d3a,#e9a13b); box-shadow:0 10px 24px rgba(220,110,40,.4); min-height:52px; }
   .primary:active{ transform:scale(.98); }
@@ -319,6 +388,18 @@
   <span class="mface">🦊</span>
 </div>
 
+<!-- 特效预览舞台：独立于设置 DOM、置于最顶层 -->
+<div id="fxStage" hidden role="presentation">
+  <div class="fx-stage-inner">
+    <div class="fx-demo-score" id="fxDemoScore">⭐ <span id="fxDemoScoreNum">0</span></div>
+    <div class="fx-demo-pair">
+      <div class="fx-demo-card" id="fxDemoCardA"><span class="fx-demo-glyph">🦊</span></div>
+      <div class="fx-demo-card" id="fxDemoCardB"><span class="fx-demo-glyph">🦊</span></div>
+    </div>
+    <div class="fx-stage-hint" data-i18n="fxHint">✨ 特效预览中 · 点任意处结束</div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status"></div>
 <canvas id="confetti" hidden></canvas>
 
@@ -374,15 +455,23 @@
         </div>
       </section>
 
-      <!-- 外观 -->
+      <!-- 外观：摘要行 + 全屏选择器 -->
       <section class="tab-panel" id="panel-look" role="tabpanel" hidden>
-        <div class="group">
-          <div class="glabel" data-i18n="theme">牌 面 主 题</div>
-          <div class="seg c4 tight" id="segTheme"></div>
+        <div class="look-row">
+          <span class="look-thumb" id="lookThemeThumb" aria-hidden="true">🎲</span>
+          <span class="look-info">
+            <span class="look-label" data-i18n="theme">牌 面 主 题</span>
+            <span class="look-value" id="lookThemeVal"></span>
+          </span>
+          <button class="look-change" type="button" id="btnPickTheme" data-i18n="changeLbl">更换</button>
         </div>
-        <div class="group">
-          <div class="glabel" data-i18n="back">牌 背 图 案</div>
-          <div class="seg c4 tight" id="segBack"></div>
+        <div class="look-row">
+          <span class="look-thumb" id="lookBackThumb" aria-hidden="true">🎲</span>
+          <span class="look-info">
+            <span class="look-label" data-i18n="back">牌 背 图 案</span>
+            <span class="look-value" id="lookBackVal"></span>
+          </span>
+          <button class="look-change" type="button" id="btnPickBack" data-i18n="changeLbl">更换</button>
         </div>
         <div class="group">
           <div class="glabel" data-i18n="language">语 言 / Language</div>
@@ -421,11 +510,11 @@
             <div class="switch-row"><div class="sw-txt"><b data-fx="fxRibbons">🎀 全屏彩带</b></div><button class="switch fx-sw" type="button" data-k="fxRibbons" aria-pressed="true"></button></div>
           </div>
         </div>
-        <div class="switch-row">
-          <div class="sw-txt"><b data-i18n="voice">语音夸奖</b><span data-i18n="voiceDesc">配对时朗读夸奖语（默认关）</span></div>
-          <button class="switch" type="button" id="swVoice" aria-pressed="false" aria-label="Voice praise"></button>
+        <div class="switch-grid">
+          <div class="switch-row"><div class="sw-txt"><b data-i18n="voice">语音夸奖</b></div><button class="switch" type="button" id="swVoice" aria-pressed="false" aria-label="Voice praise"></button></div>
+          <div class="switch-row"><div class="sw-txt"><b data-i18n="collect">🧺 配对收集带</b></div><button class="switch" type="button" id="swCollect" aria-pressed="true" aria-label="Collection strip"></button></div>
         </div>
-        <button class="ghost" type="button" id="btnFxPreview" style="margin-top:0;" data-i18n="fxPreview">✨ 特效预览</button>
+        <button class="ghost" type="button" id="btnFxPreview" style="margin-top:0; min-height:44px;" data-i18n="fxPreview">✨ 特效预览</button>
       </section>
 
       <!-- 声音 -->
@@ -445,6 +534,24 @@
       <button class="primary" id="btnStart" type="button">开始翻牌 →</button>
     </div>
   </div>
+</div>
+
+<!-- 主题选择器：全屏一屏排完 -->
+<div class="picker-back" id="themePicker" hidden>
+  <div class="picker-head">
+    <h3 data-i18n="themePick">选择牌面主题</h3>
+    <button class="picker-close" type="button" id="btnThemePickerClose" aria-label="Close">✕</button>
+  </div>
+  <div class="picker-grid theme-grid" id="themeGrid"></div>
+</div>
+
+<!-- 牌背选择器：全屏一屏排完 -->
+<div class="picker-back" id="backPicker" hidden>
+  <div class="picker-head">
+    <h3 data-i18n="backPick">选择牌背图案</h3>
+    <button class="picker-close" type="button" id="btnBackPickerClose" aria-label="Close">✕</button>
+  </div>
+  <div class="picker-grid back-grid" id="backGrid"></div>
 </div>
 
 <!-- 结算 -->
@@ -481,6 +588,7 @@
       tabGame:"🎮 对局", tabLook:"🎨 外观", tabKids:"🧒 小孩模式", tabSound:"🔊 声音",
       players:"玩 家 人 数", names:"玩 家 名 字", difficulty:"难 度", preview:"开 局 预 览",
       theme:"牌 面 主 题", back:"牌 背 图 案", language:"语 言 / Language",
+      changeLbl:"更换", themePick:"选择牌面主题", backPick:"选择牌背图案", fxHint:"✨ 特效预览中 · 点任意处结束",
       randomLbl:"🎲 随机", drawnMsg:"本局主题：{theme} · 牌背：{back}",
       bigWords:["太棒了！","找到了！","好厉害！","配对成功！","你真棒！"],
       kidsMode:"小孩模式", kidsModeDesc:"星星计分 · 无计时 · 失败不惩罚，几个人都生效",
@@ -489,7 +597,7 @@
       fxTitle:"成 功 特 效",
       fxBurst:"🎆 定点撒花", fxBounce:"🃏 牌面弹跳", fxArp:"🎵 开心音阶", fxStarFly:"⭐ 星星飞入记分", fxMascot:"🦊 吉祥物鼓励", fxFireworks:"🎇 连对小烟花",
       fxBigWord:"📣 大字夸奖", fxFountain:"⛲ 表情喷泉", fxRibbons:"🎀 全屏彩带", fxPreview:"✨ 特效预览",
-      voice:"语音夸奖", voiceDesc:"配对时朗读夸奖语（默认关）",
+      voice:"语音夸奖", voiceDesc:"配对时朗读夸奖语（默认关）", collect:"🧺 配对收集带",
       soundFx:"音效", soundFxDesc:"翻牌、配对、胜利的合成音效",
       vibrate:"震动", vibrateDesc:"配对与换人时轻震（iPhone 网页不支持，安卓有效）",
       startSolo:"开始翻牌 · 单人挑战 →", startMulti:"开始 {n} 人对局 →",
@@ -528,6 +636,7 @@
       tabGame:"🎮 Game", tabLook:"🎨 Look", tabKids:"🧒 Kids", tabSound:"🔊 Sound",
       players:"P L A Y E R S", names:"P L A Y E R  N A M E S", difficulty:"D I F F I C U L T Y", preview:"P R E V I E W",
       theme:"CARD THEME", back:"CARD BACK", language:"语 言 / Language",
+      changeLbl:"Change", themePick:"Choose Card Theme", backPick:"Choose Card Back", fxHint:"✨ Previewing effects · tap anywhere to end",
       randomLbl:"🎲 Random", drawnMsg:"This game: {theme} · Back: {back}",
       bigWords:["Great!","You found it!","Awesome!","It's a match!","Super!"],
       kidsMode:"Kids Mode", kidsModeDesc:"Stars instead of points · no timer · no penalty sounds, for any player count",
@@ -536,7 +645,7 @@
       fxTitle:"MATCH EFFECTS",
       fxBurst:"🎆 Burst confetti", fxBounce:"🃏 Card bounce", fxArp:"🎵 Happy arpeggio", fxStarFly:"⭐ Star flies to score", fxMascot:"🦊 Mascot cheers", fxFireworks:"🎇 Streak fireworks",
       fxBigWord:"📣 Big praise word", fxFountain:"⛲ Emoji fountain", fxRibbons:"🎀 Full-screen ribbons", fxPreview:"✨ Preview Effects",
-      voice:"Voice Praise", voiceDesc:"Reads a praise line aloud on a match (off by default)",
+      voice:"Voice Praise", voiceDesc:"Reads a praise line aloud on a match (off by default)", collect:"🧺 Collection Strip",
       soundFx:"Sound Effects", soundFxDesc:"Synth sounds for flips, matches and winning",
       vibrate:"Vibration", vibrateDesc:"Gentle buzz on match and turn change (not supported on iPhone web, works on Android)",
       startSolo:"Start · Solo Challenge →", startMulti:"Start {n}-Player Game →",
@@ -581,31 +690,43 @@
     ["animals","🦁","动物园","Zoo"],["ocean","🐳","海洋","Ocean"],["food","🍔","美食","Food"],["fruitveg","🍎","水果蔬菜","Fruits & Veggies"],
     ["dessert","🍰","甜点饮品","Desserts & Drinks"],["space","🚀","太空","Space"],["sports","⚽","运动","Sports"],["vehicles","🚗","交通","Vehicles"],
     ["garden","🌸","花园植物","Garden"],["music","🎸","音乐","Music"],["toys","🧸","玩具游戏","Toys & Games"],["bugsbirds","🦋","昆虫鸟类","Bugs & Birds"],
-    ["weather","🌈","天气自然","Weather & Nature"],["pets","🐶","宠物","Pets"],["festival","🎄","节日庆典","Festivals"],["jobs","👩‍🚀","职业人物","Jobs"]
+    ["weather","🌈","天气自然","Weather & Nature"],["pets","🐶","宠物","Pets"],["festival","🎄","节日庆典","Festivals"],["jobs","👩‍🚀","职业人物","Jobs"],
+    ["shapes","🔷","颜色形状","Colors & Shapes"],["numbers","🔢","数字","Numbers"],["letters","🔤","英文字母","Letters"],["emotions","😀","表情情绪","Feelings"],["body","👀","身体部位","Body Parts"],["clothes","👕","衣服穿戴","Clothes"],["home","🏠","日常用品","Everyday Things"],["farm","🚜","农场","Farm"],["seasons","🍂","四季","Seasons"],["school","🎒","学校用品","School Things"]
   ];
   var THEMES = {
-    animals: P("🦁|狮子|Lion;🐯|老虎|Tiger;🐼|熊猫|Panda;🐘|大象|Elephant;🦒|长颈鹿|Giraffe;🦓|斑马|Zebra;🦛|河马|Hippo;🦏|犀牛|Rhino;🦘|袋鼠|Kangaroo;🐨|考拉|Koala;🐻|棕熊|Bear;🦊|狐狸|Fox;🐺|狼|Wolf;🐰|兔子|Rabbit;🐿️|松鼠|Squirrel;🦔|刺猬|Hedgehog;🦌|鹿|Deer;🐪|骆驼|Camel;🦙|羊驼|Llama;🐐|山羊|Goat;🐑|绵羊|Sheep;🐷|小猪|Pig;🐮|奶牛|Cow;🐴|马|Horse;🐱|猫咪|Cat;🐶|小狗|Dog;🐵|猴子|Monkey;🦍|大猩猩|Gorilla;🦥|树懒|Sloth;🦨|臭鼬|Skunk;🦝|浣熊|Raccoon;🦦|水獭|Otter;🦫|海狸|Beaver;🦇|蝙蝠|Bat;🐭|老鼠|Mouse;🐹|仓鼠|Hamster;🐗|野猪|Boar;🦬|野牛|Bison;🐆|豹子|Leopard;🐅|老虎|Tiger;🐊|鳄鱼|Crocodile;🐢|海龟|Turtle;🦎|蜥蜴|Lizard;🐍|蛇|Snake;🐸|青蛙|Frog;🦖|霸王龙|T-Rex;🦕|长颈龙|Sauropod;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster"),
-    ocean: P("🐳|鲸鱼|Whale;🐋|蓝鲸|Blue Whale;🐬|海豚|Dolphin;🦭|海豹|Seal;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster;🦐|小虾|Shrimp;🐠|热带鱼|Tropical Fish;🐟|小鱼|Fish;🐡|河豚|Pufferfish;🦈|鲨鱼|Shark;🐢|海龟|Sea Turtle;🚤|快艇|Speedboat;🐚|贝壳|Shell;🌴|棕榈树|Palm Tree;🏄|冲浪|Surfing;🦦|海獭|Sea Otter;🧭|指南针|Compass;🦪|牡蛎|Oyster;🐌|海螺|Sea Snail;🦂|蝎子|Scorpion;🐊|鳄鱼|Crocodile;🦩|火烈鸟|Flamingo;🐧|企鹅|Penguin;🦢|天鹅|Swan;🦆|鸭子|Duck;🐸|青蛙|Frog;🛶|独木舟|Canoe;⛵|帆船|Sailboat;🚢|轮船|Ship;⚓|船锚|Anchor;🛟|救生圈|Life Ring;🏝️|小岛|Island;🌊|海浪|Wave;💧|水滴|Droplet;🫧|泡泡|Bubbles;🧜|美人鱼|Mermaid;🔱|三叉戟|Trident;🗺️|藏宝图|Treasure Map;💎|宝石|Gem;🚩|红旗|Red Flag;🪝|鱼钩|Hook;🤿|潜水面镜|Diving Mask;🎣|钓鱼竿|Fishing Pole;🌺|扶桑花|Hibiscus;🌅|海上日出|Ocean Sunrise;🏖️|沙滩|Beach;🦤|渡渡鸟|Dodo;⛴️|渡轮|Ferry;🧊|浮冰|Ice Floe;🤽|水球|Water Polo"),
-    food: P("🍔|汉堡|Burger;🍕|披萨|Pizza;🌭|热狗|Hot Dog;🌮|塔可|Taco;🌯|卷饼|Burrito;🥪|三明治|Sandwich;🍟|薯条|Fries;🍗|炸鸡|Fried Chicken;🍖|烤肉|Meat;🥓|培根|Bacon;🍳|煎蛋|Fried Egg;🥞|松饼|Pancakes;🧇|华夫饼|Waffle;🍞|面包|Bread;🥐|可颂|Croissant;🥖|法棍|Baguette;🥨|椒盐卷饼|Pretzel;🧀|奶酪|Cheese;🥗|沙拉|Salad;🍲|火锅|Hot Pot;🍜|拉面|Ramen;🍝|意面|Pasta;🍣|寿司|Sushi;🍱|便当|Bento;🍙|饭团|Onigiri;🍚|米饭|Rice;🍛|咖喱饭|Curry Rice;🥟|饺子|Dumpling;🍤|炸虾|Fried Shrimp;🍢|关东煮|Oden;🍡|团子|Dango;🥠|幸运饼干|Fortune Cookie;🥮|月饼|Mooncake;🍿|爆米花|Popcorn;🌽|玉米|Corn;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍠|红薯|Sweet Potato;🥔|土豆|Potato;🥕|胡萝卜|Carrot;🥒|黄瓜|Cucumber;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🧄|大蒜|Garlic;🧅|洋葱|Onion;🍄|蘑菇|Mushroom;🥩|牛排|Steak;🫔|墨西哥卷|Tamale;🦴|骨头|Bone"),
-    fruitveg: P("🍎|苹果|Apple;🍐|梨|Pear;🍊|橙子|Orange;🍋|柠檬|Lemon;🍌|香蕉|Banana;🍉|西瓜|Watermelon;🍇|葡萄|Grapes;🍓|草莓|Strawberry;🫐|蓝莓|Blueberries;🍈|甜瓜|Melon;🍒|樱桃|Cherries;🍑|桃子|Peach;🥭|芒果|Mango;🍍|菠萝|Pineapple;🥥|椰子|Coconut;🥝|猕猴桃|Kiwi;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥑|牛油果|Avocado;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🥒|黄瓜|Cucumber;🌶️|辣椒|Chili;🫑|甜椒|Bell Pepper;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🫒|橄榄|Olive;🧄|大蒜|Garlic;🧅|洋葱|Onion;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🥞|松饼|Pancakes;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;🎃|南瓜|Pumpkin;🥚|鸡蛋|Egg;🍏|青苹果|Green Apple;🧈|黄油|Butter;🧆|蔬菜丸子|Veggie Balls;🧀|奶酪|Cheese;🥫|番茄罐头|Canned Tomatoes;🌻|向日葵|Sunflower;🌾|稻穗|Sheaf of Rice;🥗|蔬菜沙拉|Veggie Salad;🍯|蜂蜜|Honey;🫙|果酱|Fruit Jam;🧃|果汁|Juice;🥛|牛奶|Milk;🥯|贝果|Bagel;🥙|蔬菜卷饼|Stuffed Wrap;🍲|蔬菜汤|Veggie Soup"),
-    dessert: P("🍰|蛋糕|Cake;🎂|生日蛋糕|Birthday Cake;🧁|纸杯蛋糕|Cupcake;🍩|甜甜圈|Donut;🍪|饼干|Cookie;🍫|巧克力|Chocolate;🍬|糖果|Candy;🍭|棒棒糖|Lollipop;🍮|布丁|Pudding;🍯|蜂蜜|Honey;🍦|冰淇淋|Ice Cream;🍨|冰淇淋杯|Sundae;🍧|刨冰|Shaved Ice;🍘|米饼|Rice Cracker;🥣|甜汤|Sweet Soup;🧇|华夫饼|Waffle;🥞|松饼|Pancakes;🍞|吐司|Toast;🥐|可颂|Croissant;🥖|法棍|Baguette;🧀|芝士蛋糕|Cheesecake;🍓|草莓蛋糕|Strawberry Cake;🍒|樱桃派|Cherry Pie;🥛|牛奶|Milk;🧃|果汁|Juice Box;🥤|汽水|Soda;🧋|珍珠奶茶|Bubble Tea;🍵|抹茶|Matcha;☕|咖啡|Coffee;🫖|茶壶|Teapot;🍶|清酒|Sake;🥂|香槟|Champagne;🍹|鸡尾酒|Cocktail;🧉|马黛茶|Mate;🍼|牛奶瓶|Milk Bottle;🥜|花生酱|Peanut Butter;🧊|冰块|Ice;🍾|香槟瓶|Champagne Bottle;🍥|鱼板|Fish Cake;🍻|干杯啤酒|Beers;🍽️|甜品餐盘|Dessert Plate;🥮|月饼|Mooncake;🍡|三色团子|Dango;🍢|丸子串|Skewer;🥠|幸运饼干|Fortune Cookie;🥧|苹果派|Apple Pie;🥄|甜品勺|Dessert Spoon;🍴|餐叉|Fork;🍌|香蕉船|Banana Split;🍇|葡萄|Grapes;🍉|西瓜冰沙|Watermelon Sorbet;🍊|橙子|Orange"),
+    animals: P("🦁|狮子|Lion;🐯|老虎|Tiger;🐼|熊猫|Panda;🐘|大象|Elephant;🦒|长颈鹿|Giraffe;🦓|斑马|Zebra;🦛|河马|Hippo;🦏|犀牛|Rhino;🦘|袋鼠|Kangaroo;🐨|考拉|Koala;🐻|棕熊|Bear;🦊|狐狸|Fox;🐺|狼|Wolf;🐰|兔子|Rabbit;🐿️|松鼠|Squirrel;🦔|刺猬|Hedgehog;🦌|鹿|Deer;🐪|骆驼|Camel;🦙|羊驼|Llama;🐐|山羊|Goat;🐑|绵羊|Sheep;🐷|小猪|Pig;🐮|奶牛|Cow;🐴|马|Horse;🐱|猫咪|Cat;🐶|小狗|Dog;🐵|猴子|Monkey;🦍|大猩猩|Gorilla;🦥|树懒|Sloth;🦨|臭鼬|Skunk;🦝|浣熊|Raccoon;🦦|水獭|Otter;🐏|公羊|Ram;🦇|蝙蝠|Bat;🐭|老鼠|Mouse;🐹|仓鼠|Hamster;🐗|野猪|Boar;🐂|公牛|Ox;🐆|豹子|Leopard;🐅|老虎|Tiger;🐊|鳄鱼|Crocodile;🐢|海龟|Turtle;🦎|蜥蜴|Lizard;🐍|蛇|Snake;🐸|青蛙|Frog;🦖|霸王龙|T-Rex;🦕|长颈龙|Sauropod;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster"),
+    ocean: P("🐳|鲸鱼|Whale;🐋|蓝鲸|Blue Whale;🐬|海豚|Dolphin;🏊|游泳|Swimming;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster;🦐|小虾|Shrimp;🐠|热带鱼|Tropical Fish;🐟|小鱼|Fish;🐡|河豚|Pufferfish;🦈|鲨鱼|Shark;🐢|海龟|Sea Turtle;🚤|快艇|Speedboat;🐚|贝壳|Shell;🌴|棕榈树|Palm Tree;🏄|冲浪|Surfing;🦦|海獭|Sea Otter;🧭|指南针|Compass;🚣|划船|Rowing;🐌|海螺|Sea Snail;🦂|蝎子|Scorpion;🐊|鳄鱼|Crocodile;🦩|火烈鸟|Flamingo;🐧|企鹅|Penguin;🦢|天鹅|Swan;🦆|鸭子|Duck;🐸|青蛙|Frog;🛶|独木舟|Canoe;⛵|帆船|Sailboat;🚢|轮船|Ship;⚓|船锚|Anchor;⛱️|沙滩伞|Beach Umbrella;🏝️|小岛|Island;🌊|海浪|Wave;💧|水滴|Droplet;💦|水花|Splash;🧜|美人鱼|Mermaid;🔱|三叉戟|Trident;🗺️|藏宝图|Treasure Map;💎|宝石|Gem;🚩|红旗|Red Flag;🎏|鲤鱼旗|Carp Streamer;🤿|潜水面镜|Diving Mask;🎣|钓鱼竿|Fishing Pole;🌺|扶桑花|Hibiscus;🌅|海上日出|Ocean Sunrise;🏖️|沙滩|Beach;🕊️|鸽子|Dove;⛴️|渡轮|Ferry;🧊|浮冰|Ice Floe;🤽|水球|Water Polo"),
+    food: P("🍔|汉堡|Burger;🍕|披萨|Pizza;🌭|热狗|Hot Dog;🌮|塔可|Taco;🌯|卷饼|Burrito;🥪|三明治|Sandwich;🍟|薯条|Fries;🍗|炸鸡|Fried Chicken;🍖|烤肉|Meat;🥓|培根|Bacon;🍳|煎蛋|Fried Egg;🥞|松饼|Pancakes;🧇|华夫饼|Waffle;🍞|面包|Bread;🥐|可颂|Croissant;🥖|法棍|Baguette;🥨|椒盐卷饼|Pretzel;🧀|奶酪|Cheese;🥗|沙拉|Salad;🍲|火锅|Hot Pot;🍜|拉面|Ramen;🍝|意面|Pasta;🍣|寿司|Sushi;🍱|便当|Bento;🍙|饭团|Onigiri;🍚|米饭|Rice;🍛|咖喱饭|Curry Rice;🥟|饺子|Dumpling;🍤|炸虾|Fried Shrimp;🍢|关东煮|Oden;🍡|团子|Dango;🥠|幸运饼干|Fortune Cookie;🥮|月饼|Mooncake;🍿|爆米花|Popcorn;🌽|玉米|Corn;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍠|红薯|Sweet Potato;🥔|土豆|Potato;🥕|胡萝卜|Carrot;🥒|黄瓜|Cucumber;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🧄|大蒜|Garlic;🧅|洋葱|Onion;🍄|蘑菇|Mushroom;🥩|牛排|Steak;🍘|米饼|Rice Cracker;🦴|骨头|Bone"),
+    fruitveg: P("🍎|苹果|Apple;🍐|梨|Pear;🍊|橙子|Orange;🍋|柠檬|Lemon;🍌|香蕉|Banana;🍉|西瓜|Watermelon;🍇|葡萄|Grapes;🍓|草莓|Strawberry;🍈|甜瓜|Melon;🍒|樱桃|Cherries;🍑|桃子|Peach;🥭|芒果|Mango;🍍|菠萝|Pineapple;🥥|椰子|Coconut;🥝|猕猴桃|Kiwi;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥑|牛油果|Avocado;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🥒|黄瓜|Cucumber;🌶️|辣椒|Chili;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🧄|大蒜|Garlic;🧅|洋葱|Onion;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🥞|松饼|Pancakes;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;🎃|南瓜|Pumpkin;🥚|鸡蛋|Egg;🍏|青苹果|Green Apple;🧈|黄油|Butter;🧆|蔬菜丸子|Veggie Balls;🧀|奶酪|Cheese;🥫|番茄罐头|Canned Tomatoes;🌻|向日葵|Sunflower;🌾|稻穗|Sheaf of Rice;🥗|蔬菜沙拉|Veggie Salad;🍯|蜂蜜|Honey;🧃|果汁|Juice;🥛|牛奶|Milk;🥯|贝果|Bagel;🥙|蔬菜卷饼|Stuffed Wrap;🍲|蔬菜汤|Veggie Soup"),
+    dessert: P("🍰|蛋糕|Cake;🎂|生日蛋糕|Birthday Cake;🧁|纸杯蛋糕|Cupcake;🍩|甜甜圈|Donut;🍪|饼干|Cookie;🍫|巧克力|Chocolate;🍬|糖果|Candy;🍭|棒棒糖|Lollipop;🍮|布丁|Pudding;🍯|蜂蜜|Honey;🍦|冰淇淋|Ice Cream;🍨|冰淇淋杯|Sundae;🍧|刨冰|Shaved Ice;🍘|米饼|Rice Cracker;🥣|甜汤|Sweet Soup;🧇|华夫饼|Waffle;🥞|松饼|Pancakes;🍞|吐司|Toast;🥐|可颂|Croissant;🥖|法棍|Baguette;🧀|芝士蛋糕|Cheesecake;🍓|草莓蛋糕|Strawberry Cake;🍒|樱桃派|Cherry Pie;🥛|牛奶|Milk;🧃|果汁|Juice Box;🥤|汽水|Soda;🍵|抹茶|Matcha;☕|咖啡|Coffee;🍶|清酒|Sake;🥂|香槟|Champagne;🍹|鸡尾酒|Cocktail;🧉|马黛茶|Mate;🍼|牛奶瓶|Milk Bottle;🥜|花生酱|Peanut Butter;🧊|冰块|Ice;🍾|香槟瓶|Champagne Bottle;🍥|鱼板|Fish Cake;🍻|干杯啤酒|Beers;🍽️|甜品餐盘|Dessert Plate;🥮|月饼|Mooncake;🍡|三色团子|Dango;🍢|丸子串|Skewer;🥠|幸运饼干|Fortune Cookie;🥧|苹果派|Apple Pie;🥄|甜品勺|Dessert Spoon;🍴|餐叉|Fork;🍌|香蕉船|Banana Split;🍇|葡萄|Grapes;🍉|西瓜冰沙|Watermelon Sorbet;🍊|橙子|Orange"),
     space: P("🚀|火箭|Rocket;🛸|飞碟|UFO;🛰️|卫星|Satellite;🌕|满月|Full Moon;🌖|盈凸月|Gibbous Moon;🌗|下弦月|Last Quarter Moon;🌘|残月|Waning Moon;🌑|新月|New Moon;🌒|眉月|Waxing Moon;🌓|上弦月|First Quarter Moon;🌔|凸月|Waxing Gibbous;🌙|弯月|Crescent Moon;🌛|月亮脸|Moon Face;🌜|晚月脸|Late Moon Face;🌚|新月脸|New Moon Face;🌝|满月脸|Full Moon Face;🌞|太阳脸|Sun Face;🌟|闪亮星|Glowing Star;💫|流星|Dizzy Star;✨|闪烁|Sparkles;☄️|彗星|Comet;🌠|流星雨|Shooting Star;🌍|地球|Earth;🌎|美洲地球|Earth Americas;🌏|亚洲地球|Earth Asia;🪐|土星|Saturn;🔭|望远镜|Telescope;📡|卫星天线|Satellite Dish;👽|外星人|Alien;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🌌|银河|Milky Way;🌐|经纬地球|Globe;🔮|水晶球|Crystal Ball;🔥|火焰|Fire;🧲|磁铁|Magnet;🔬|显微镜|Microscope;🌡️|温度计|Thermometer;💡|灯泡|Light Bulb;🔋|电池|Battery;🌃|星夜|Starry Night;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;💥|爆炸|Collision;⚡|闪电|Lightning;❄️|雪花|Snowflake;🧊|冰块|Ice;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;🌈|彩虹|Rainbow;☁️|云朵|Cloud;🌊|海浪|Wave;🔦|手电筒|Flashlight"),
-    sports: P("⚽|足球|Soccer;🏀|篮球|Basketball;🏈|橄榄球|Football;⚾|棒球|Baseball;🥎|垒球|Softball;🎾|网球|Tennis;🏐|排球|Volleyball;🏉|英式橄榄球|Rugby;🎱|台球|Pool;🏓|乒乓球|Ping Pong;🏸|羽毛球|Badminton;🏒|冰球|Ice Hockey;🏑|曲棍球|Field Hockey;🥍|长曲棍球|Lacrosse;🏏|板球|Cricket;⛳|高尔夫|Golf;🏹|射箭|Archery;🎣|钓鱼|Fishing;🥊|拳击|Boxing;🥋|空手道|Karate;🛹|滑板|Skateboard;🛼|轮滑|Roller Skate;🛷|雪橇|Sled;⛸️|冰鞋|Ice Skate;🥌|冰壶|Curling;🎿|滑雪|Skiing;🏂|单板滑雪|Snowboard;🏋️|举重|Weightlifting;🤸|体操|Gymnastics;🤺|击剑|Fencing;🤾|手球|Handball;🏌️|高尔夫手|Golfer;🏇|赛马|Horse Racing;🚣|划船|Rowing;🚵|山地骑行|Mountain Biking;🚴|骑行|Cycling;🏃|跑步|Running;🏊|游泳|Swimming;🤽|水球|Water Polo;🧗|攀岩|Climbing;🏄|冲浪|Surfing;🪂|跳伞|Parachute;🏆|奖杯|Trophy;🥇|金牌|Gold Medal;🥈|银牌|Silver Medal;🥉|铜牌|Bronze Medal;🏅|奖牌|Medal;🎽|跑步背心|Running Shirt;👟|跑鞋|Sneaker;🧢|棒球帽|Cap;🎯|飞镖|Darts"),
-    vehicles: P("🚗|汽车|Car;🚕|出租车|Taxi;🚙|越野车|SUV;🚌|公交车|Bus;🚎|无轨电车|Trolleybus;🏎️|赛车|Race Car;🚓|警车|Police Car;🚑|救护车|Ambulance;🚒|消防车|Fire Truck;🚐|面包车|Minivan;🛻|皮卡|Pickup Truck;🚚|货车|Truck;🚛|卡车|Semi Truck;🚜|拖拉机|Tractor;🏍️|摩托车|Motorcycle;🛵|小摩托|Scooter;🚲|自行车|Bicycle;🛴|滑板车|Kick Scooter;🛺|三轮车|Auto Rickshaw;🚂|火车头|Locomotive;🚆|火车|Train;🚄|高铁|Bullet Train;🚅|动车|High-Speed Train;🚈|轻轨|Light Rail;🚇|地铁|Metro;🚊|电车|Tram;🚉|火车站|Station;✈️|飞机|Airplane;🛩️|小飞机|Small Plane;🛫|起飞|Takeoff;🛬|降落|Landing;🚁|直升机|Helicopter;🛸|飞碟|UFO;🚀|火箭|Rocket;🛰️|卫星|Satellite;⛵|帆船|Sailboat;🚤|快艇|Speedboat;🛥️|游艇|Yacht;🚢|轮船|Ship;⛴️|渡轮|Ferry;🛶|独木舟|Canoe;🚠|缆车|Cable Car;🚡|索道|Aerial Tramway;🛎️|服务铃|Bell;⛽|加油站|Gas Station;🚏|公交站|Bus Stop;🚦|红绿灯|Traffic Light;🚨|警灯|Police Light;🛒|购物车|Cart;🛣️|高速公路|Highway;🛤️|铁路轨道|Railway Track"),
-    garden: P("🌸|樱花|Cherry Blossom;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🪷|莲花|Lotus;🍇|葡萄|Grapes;💐|花束|Bouquet;🌾|稻穗|Sheaf of Rice;🌿|香草|Herb;🍀|四叶草|Four-Leaf Clover;☘️|三叶草|Shamrock;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaf;🍃|绿叶|Leaf;🌱|嫩芽|Seedling;🌲|松树|Pine Tree;🌳|大树|Deciduous Tree;🌴|棕榈树|Palm Tree;🌵|仙人掌|Cactus;🎋|竹子|Tanabata Tree;🎍|松竹装饰|Pine Decoration;🪴|盆栽|Potted Plant;🍄|蘑菇|Mushroom;🌰|栗子|Chestnut;🥚|鸡蛋|Egg;🐣|小鸡|Hatching Chick;🦋|蝴蝶|Butterfly;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🐌|蜗牛|Snail;🐛|毛毛虫|Bug;🪱|蚯蚓|Worm;🐜|蚂蚁|Ant;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌧️|下雨|Rain;💧|水滴|Droplet;🪣|水桶|Bucket;🧤|园艺手套|Gardening Gloves;🚿|浇水|Shower;🌡️|温度计|Thermometer;🪵|木头|Wood;🪨|石头|Rock;🏡|花园小屋|Garden House;💮|白花|White Flower;🏵️|玫瑰花环|Rosette;🌤️|晴间多云|Sunny Spell"),
-    music: P("🎸|吉他|Guitar;🎹|钢琴|Piano;🥁|鼓|Drum;🎺|小号|Trumpet;🎻|小提琴|Violin;🎷|萨克斯|Saxophone;🪗|手风琴|Accordion;🪘|手鼓|Hand Drum;🪕|班卓琴|Banjo;🎤|麦克风|Microphone;🎙️|录音麦克风|Studio Mic;🎧|耳机|Headphones;📻|收音机|Radio;📺|电视|TV;🎥|摄像机|Movie Camera;📹|录像机|Video Camera;💿|光盘|CD;📀|影碟|DVD;📼|录像带|Videotape;🎞️|电影胶片|Film;🎬|场记板|Clapper Board;🎭|戏剧面具|Theater Masks;🎪|马戏团|Circus Tent;🎫|演出门票|Ticket;🎟️|入场券|Admission Ticket;💃|舞者|Dancer;🕺|跳舞|Man Dancing;🩰|芭蕾舞鞋|Ballet Shoes;🔔|铃铛|Bell;🛎️|服务铃|Service Bell;📢|喇叭|Megaphone;📣|扩音器|Loudspeaker;🔊|大音量|Speaker;🔉|中音量|Medium Volume;🔈|小音量|Low Volume;🎚️|调音台|Mixer;🎛️|控制台|Control Panel;🎵|音符|Musical Note;🎶|旋律|Musical Notes;🎼|乐谱|Musical Score;📯|号角|Horn;👏|鼓掌|Clapping;🎉|派对拉炮|Party Popper;🎊|彩带球|Confetti Ball;🎈|气球|Balloon;✨|闪烁|Sparkles;🌟|闪亮星|Glowing Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;📷|相机|Camera;📸|闪光相机|Camera Flash;🎩|魔术帽|Top Hat"),
-    toys: P("🧸|泰迪熊|Teddy Bear;🪀|溜溜球|Yo-Yo;🪁|风筝|Kite;🎮|游戏手柄|Game Controller;🕹️|摇杆|Joystick;🎲|骰子|Dice;🧩|拼图|Puzzle;♟️|国际象棋|Chess Pawn;🎯|飞镖靶|Darts;🎳|保龄球|Bowling;🎪|马戏团|Circus;🎠|旋转木马|Carousel;🎡|摩天轮|Ferris Wheel;🎢|过山车|Roller Coaster;🧱|积木|Bricks;🪆|套娃|Nesting Dolls;🎨|调色板|Palette;🖍️|蜡笔|Crayon;✏️|铅笔|Pencil;📚|书本|Books;🔮|水晶球|Crystal Ball;🪄|魔法棒|Magic Wand;🎩|魔术帽|Top Hat;🃏|小丑牌|Joker;🀄|麻将|Mahjong;🎴|花牌|Flower Cards;🐰|兔子玩偶|Bunny Plush;🔫|水枪|Water Gun;🎏|鲤鱼旗|Carp Streamer;🎰|老虎机|Slot Machine;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🚀|玩具火箭|Toy Rocket;🚁|玩具直升机|Toy Helicopter;🚂|玩具火车|Toy Train;🚗|玩具车|Toy Car;🏰|城堡|Castle;🪅|皮纳塔|Piñata;🎊|五彩纸屑|Confetti Ball;🎉|派对拉炮|Party Popper;🎈|气球|Balloon;🎁|礼物|Gift;🧦|袜子|Sock;🪭|折扇|Folding Fan;🪮|梳子|Comb;🪥|牙刷|Toothbrush;🪣|沙滩桶|Bucket;🛷|雪橇|Sled;⚽|玩具足球|Toy Soccer;🏀|玩具篮球|Toy Basketball;🪃|回旋镖|Boomerang"),
-    bugsbirds: P("🦋|蝴蝶|Butterfly;🐛|毛毛虫|Caterpillar;🐜|蚂蚁|Ant;🐝|蜜蜂|Bee;🪲|甲虫|Beetle;🐞|瓢虫|Ladybug;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🦂|蝎子|Scorpion;🦟|蚊子|Mosquito;🪰|苍蝇|Fly;🪱|蚯蚓|Worm;🐌|蜗牛|Snail;🦐|小虾|Shrimp;🦀|螃蟹|Crab;🐦|小鸟|Bird;🐤|小鸡|Chick;🐣|孵化小鸡|Hatching Chick;🐥|站立小鸡|Baby Chick;🐧|企鹅|Penguin;🦅|老鹰|Eagle;🦆|鸭子|Duck;🦢|天鹅|Swan;🦉|猫头鹰|Owl;🦩|火烈鸟|Flamingo;🦜|鹦鹉|Parrot;🦚|孔雀|Peacock;🦃|火鸡|Turkey;🐔|母鸡|Chicken;🐓|公鸡|Rooster;🕊️|鸽子|Dove;🦤|渡渡鸟|Dodo;🪿|鹅|Goose;🦇|蝙蝠|Bat;🪶|羽毛|Feather;🥚|鸡蛋|Egg;🕸️|蜘蛛网|Spider Web;🦎|蜥蜴|Lizard;🐢|乌龟|Turtle;🐸|青蛙|Frog;🐍|小蛇|Snake;🦭|海豹|Seal;🪳|蟑螂|Cockroach;🌿|树叶|Leaf;🌳|大树|Tree;🌸|樱花|Blossom;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🍃|绿叶|Green Leaf;🌱|嫩芽|Sprout;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🍄|蘑菇|Mushroom;🌈|彩虹|Rainbow;💧|水滴|Droplet"),
-    weather: P("☀️|晴天|Sunny;🌤️|多云转晴|Mostly Sunny;⛅|多云|Partly Cloudy;☁️|阴天|Cloudy;🌧️|下雨|Rainy;⛈️|雷阵雨|Thunderstorm;🌩️|闪电|Lightning;🌦️|太阳雨|Sun Shower;🌨️|下雪|Snowy;❄️|雪花|Snowflake;☃️|雪人|Snowman;⛄|小雪人|Snowman;🌬️|大风|Wind;💨|疾风|Gust;🌪️|龙卷风|Tornado;🌫️|大雾|Fog;🌈|彩虹|Rainbow;🌊|海浪|Wave;💧|雨滴|Raindrop;💦|水花|Splash;🔥|火焰|Fire;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;⛰️|山峰|Mountain;🏝️|海岛|Island;🏖️|沙滩|Beach;🏜️|沙漠|Desert;🌅|日出|Sunrise;🌄|山间日出|Mountain Sunrise;🌇|日落|Sunset;🌆|黄昏城市|City Dusk;🌃|夜晚|Night;🌌|银河|Galaxy;🌙|月亮|Moon;🌟|闪亮星|Glowing Star;☄️|彗星|Comet;🪐|行星|Planet;🌡️|温度计|Thermometer;🧊|冰块|Ice;🫧|泡泡|Bubbles;🌸|樱花|Blossom;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🌱|新芽|Sprout;🌴|棕榈树|Palm;🌵|仙人掌|Cactus;🎋|竹子|Bamboo;🌾|稻田|Rice Field;🌻|向日葵|Sunflower;🌷|郁金香|Tulip"),
+    sports: P("⚽|足球|Soccer;🏀|篮球|Basketball;🏈|橄榄球|Football;⚾|棒球|Baseball;🥎|垒球|Softball;🎾|网球|Tennis;🏐|排球|Volleyball;🏉|英式橄榄球|Rugby;🎱|台球|Pool;🏓|乒乓球|Ping Pong;🏸|羽毛球|Badminton;🏒|冰球|Ice Hockey;🏑|曲棍球|Field Hockey;🥍|长曲棍球|Lacrosse;🏏|板球|Cricket;⛳|高尔夫|Golf;🏹|射箭|Archery;🎣|钓鱼|Fishing;🥊|拳击|Boxing;🥋|空手道|Karate;🛹|滑板|Skateboard;🛷|雪橇|Sled;⛸️|冰鞋|Ice Skate;🥌|冰壶|Curling;🎿|滑雪|Skiing;🏂|单板滑雪|Snowboard;🏋️|举重|Weightlifting;🤸|体操|Gymnastics;🤺|击剑|Fencing;🤾|手球|Handball;🏌️|高尔夫手|Golfer;🏇|赛马|Horse Racing;🚣|划船|Rowing;🚵|山地骑行|Mountain Biking;🚴|骑行|Cycling;🏃|跑步|Running;🏊|游泳|Swimming;🤽|水球|Water Polo;🧗|攀岩|Climbing;🏄|冲浪|Surfing;🪂|跳伞|Parachute;🏆|奖杯|Trophy;🥇|金牌|Gold Medal;🥈|银牌|Silver Medal;🥉|铜牌|Bronze Medal;🏅|奖牌|Medal;🎽|跑步背心|Running Shirt;👟|跑鞋|Sneaker;🧢|棒球帽|Cap;🎯|飞镖|Darts"),
+    vehicles: P("🚗|汽车|Car;🚕|出租车|Taxi;🚙|越野车|SUV;🚌|公交车|Bus;🚎|无轨电车|Trolleybus;🏎️|赛车|Race Car;🚓|警车|Police Car;🚑|救护车|Ambulance;🚒|消防车|Fire Truck;🚐|面包车|Minivan;🚘|迎面汽车|Oncoming Car;🚚|货车|Truck;🚛|卡车|Semi Truck;🚜|拖拉机|Tractor;🏍️|摩托车|Motorcycle;🛵|小摩托|Scooter;🚲|自行车|Bicycle;🛴|滑板车|Kick Scooter;🛺|三轮车|Auto Rickshaw;🚂|火车头|Locomotive;🚆|火车|Train;🚄|高铁|Bullet Train;🚅|动车|High-Speed Train;🚈|轻轨|Light Rail;🚇|地铁|Metro;🚊|电车|Tram;🚉|火车站|Station;✈️|飞机|Airplane;🛩️|小飞机|Small Plane;🛫|起飞|Takeoff;🛬|降落|Landing;🚁|直升机|Helicopter;🛸|飞碟|UFO;🚀|火箭|Rocket;🛰️|卫星|Satellite;⛵|帆船|Sailboat;🚤|快艇|Speedboat;🛥️|游艇|Yacht;🚢|轮船|Ship;⛴️|渡轮|Ferry;🛶|独木舟|Canoe;🚠|缆车|Cable Car;🚡|索道|Aerial Tramway;🛎️|服务铃|Bell;⛽|加油站|Gas Station;🚏|公交站|Bus Stop;🚦|红绿灯|Traffic Light;🚨|警灯|Police Light;🛒|购物车|Cart;🛣️|高速公路|Highway;🛤️|铁路轨道|Railway Track"),
+    garden: P("🌸|樱花|Cherry Blossom;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🌞|太阳公公|Sun Face;🍇|葡萄|Grapes;💐|花束|Bouquet;🌾|稻穗|Sheaf of Rice;🌿|香草|Herb;🍀|四叶草|Four-Leaf Clover;☘️|三叶草|Shamrock;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaf;🍃|绿叶|Leaf;🌱|嫩芽|Seedling;🌲|松树|Pine Tree;🌳|大树|Deciduous Tree;🌴|棕榈树|Palm Tree;🌵|仙人掌|Cactus;🎋|竹子|Tanabata Tree;🎍|松竹装饰|Pine Decoration;🌦️|太阳雨|Sun Shower;🍄|蘑菇|Mushroom;🌰|栗子|Chestnut;🥚|鸡蛋|Egg;🐣|小鸡|Hatching Chick;🦋|蝴蝶|Butterfly;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🐌|蜗牛|Snail;🐛|毛毛虫|Bug;🐜|蚂蚁|Ant;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌧️|下雨|Rain;💧|水滴|Droplet;🧤|园艺手套|Gardening Gloves;🚿|浇水|Shower;🌡️|温度计|Thermometer;🏡|花园小屋|Garden House;💮|白花|White Flower;🏵️|玫瑰花环|Rosette;🌤️|晴间多云|Sunny Spell"),
+    music: P("🎸|吉他|Guitar;🎹|钢琴|Piano;🥁|鼓|Drum;🎺|小号|Trumpet;🎻|小提琴|Violin;🎷|萨克斯|Saxophone;🪕|班卓琴|Banjo;🎤|麦克风|Microphone;🎙️|录音麦克风|Studio Mic;🎧|耳机|Headphones;📻|收音机|Radio;📺|电视|TV;🎥|摄像机|Movie Camera;📹|录像机|Video Camera;💿|光盘|CD;📀|影碟|DVD;📼|录像带|Videotape;🎞️|电影胶片|Film;🎬|场记板|Clapper Board;🎭|戏剧面具|Theater Masks;🎪|马戏团|Circus Tent;🎫|演出门票|Ticket;🎟️|入场券|Admission Ticket;💃|舞者|Dancer;🕺|跳舞|Man Dancing;🩰|芭蕾舞鞋|Ballet Shoes;🔔|铃铛|Bell;🛎️|服务铃|Service Bell;📢|喇叭|Megaphone;📣|扩音器|Loudspeaker;🔊|大音量|Speaker;🔉|中音量|Medium Volume;🔈|小音量|Low Volume;🎚️|调音台|Mixer;🎛️|控制台|Control Panel;🎵|音符|Musical Note;🎶|旋律|Musical Notes;🎼|乐谱|Musical Score;📯|号角|Horn;👏|鼓掌|Clapping;🎉|派对拉炮|Party Popper;🎊|彩带球|Confetti Ball;🎈|气球|Balloon;✨|闪烁|Sparkles;🌟|闪亮星|Glowing Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;📷|相机|Camera;📸|闪光相机|Camera Flash;🎩|魔术帽|Top Hat"),
+    toys: P("🧸|泰迪熊|Teddy Bear;🪀|溜溜球|Yo-Yo;🪁|风筝|Kite;🎮|游戏手柄|Game Controller;🕹️|摇杆|Joystick;🎲|骰子|Dice;🧩|拼图|Puzzle;♟️|国际象棋|Chess Pawn;🎯|飞镖靶|Darts;🎳|保龄球|Bowling;🎪|马戏团|Circus;🎠|旋转木马|Carousel;🎡|摩天轮|Ferris Wheel;🎢|过山车|Roller Coaster;🧱|积木|Bricks;🎎|日本娃娃|Japanese Dolls;🎨|调色板|Palette;🖍️|蜡笔|Crayon;✏️|铅笔|Pencil;📚|书本|Books;🔮|水晶球|Crystal Ball;✨|闪烁星星|Sparkles;🎩|魔术帽|Top Hat;🃏|小丑牌|Joker;🀄|麻将|Mahjong;🎴|花牌|Flower Cards;🐰|兔子玩偶|Bunny Plush;🔫|水枪|Water Gun;🎏|鲤鱼旗|Carp Streamer;🎰|老虎机|Slot Machine;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🚀|玩具火箭|Toy Rocket;🚁|玩具直升机|Toy Helicopter;🚂|玩具火车|Toy Train;🚗|玩具车|Toy Car;🏰|城堡|Castle;🍬|糖果|Candy;🎊|五彩纸屑|Confetti Ball;🎉|派对拉炮|Party Popper;🎈|气球|Balloon;🎁|礼物|Gift;🧦|袜子|Sock;🎭|戏剧面具|Theater Masks;🛷|雪橇|Sled;⚽|玩具足球|Toy Soccer;🏀|玩具篮球|Toy Basketball;🥏|飞盘|Frisbee"),
+    bugsbirds: P("🦋|蝴蝶|Butterfly;🐛|毛毛虫|Caterpillar;🐜|蚂蚁|Ant;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🦂|蝎子|Scorpion;🦟|蚊子|Mosquito;🐌|蜗牛|Snail;🦐|小虾|Shrimp;🦀|螃蟹|Crab;🐦|小鸟|Bird;🐤|小鸡|Chick;🐣|孵化小鸡|Hatching Chick;🐥|站立小鸡|Baby Chick;🐧|企鹅|Penguin;🦅|老鹰|Eagle;🦆|鸭子|Duck;🦢|天鹅|Swan;🦉|猫头鹰|Owl;🦩|火烈鸟|Flamingo;🦜|鹦鹉|Parrot;🦚|孔雀|Peacock;🦃|火鸡|Turkey;🐔|母鸡|Chicken;🐓|公鸡|Rooster;🕊️|鸽子|Dove;🦇|蝙蝠|Bat;🥚|鸡蛋|Egg;🕸️|蜘蛛网|Spider Web;🦎|蜥蜴|Lizard;🐢|乌龟|Turtle;🐸|青蛙|Frog;🐍|小蛇|Snake;🌿|树叶|Leaf;🌳|大树|Tree;🌸|樱花|Blossom;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🍃|绿叶|Green Leaf;🌱|嫩芽|Sprout;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🍄|蘑菇|Mushroom;🌈|彩虹|Rainbow;💧|水滴|Droplet"),
+    weather: P("☀️|晴天|Sunny;🌤️|多云转晴|Mostly Sunny;⛅|多云|Partly Cloudy;☁️|阴天|Cloudy;🌧️|下雨|Rainy;⛈️|雷阵雨|Thunderstorm;🌩️|闪电|Lightning;🌦️|太阳雨|Sun Shower;🌨️|下雪|Snowy;❄️|雪花|Snowflake;☃️|雪人|Snowman;⛄|小雪人|Snowman;🌬️|大风|Wind;💨|疾风|Gust;🌪️|龙卷风|Tornado;🌫️|大雾|Fog;🌈|彩虹|Rainbow;🌊|海浪|Wave;💧|雨滴|Raindrop;💦|水花|Splash;🔥|火焰|Fire;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;⛰️|山峰|Mountain;🏝️|海岛|Island;🏖️|沙滩|Beach;🏜️|沙漠|Desert;🌅|日出|Sunrise;🌄|山间日出|Mountain Sunrise;🌇|日落|Sunset;🌆|黄昏城市|City Dusk;🌃|夜晚|Night;🌌|银河|Galaxy;🌙|月亮|Moon;🌟|闪亮星|Glowing Star;☄️|彗星|Comet;🪐|行星|Planet;🌡️|温度计|Thermometer;🧊|冰块|Ice;🌀|旋风|Cyclone;🌸|樱花|Blossom;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🌱|新芽|Sprout;🌴|棕榈树|Palm;🌵|仙人掌|Cactus;🎋|竹子|Bamboo;🌾|稻田|Rice Field;🌻|向日葵|Sunflower;🌷|郁金香|Tulip"),
     pets: P("🐶|小狗|Dog;🐱|小猫|Cat;🐭|仓鼠|Hamster;🐰|兔子|Rabbit;🦊|狐狸|Fox;🐻|小熊|Bear;🐼|熊猫|Panda;🐨|考拉|Koala;🐯|老虎|Tiger;🦁|狮子|Lion;🐷|小猪|Pig;🐸|青蛙|Frog;🐵|猴子|Monkey;🐔|小鸡|Chicken;🐧|企鹅|Penguin;🐦|小鸟|Bird;🦆|鸭子|Duck;🦉|猫头鹰|Owl;🐺|小狼|Wolf;🐗|野猪|Boar;🐴|小马|Horse;🦄|独角兽|Unicorn;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐌|蜗牛|Snail;🐞|瓢虫|Ladybug;🐠|金鱼|Goldfish;🐟|小鱼|Fish;🐢|乌龟|Turtle;🦎|蜥蜴|Lizard;🐙|章鱼|Octopus;🦜|鹦鹉|Parrot;🐩|贵宾犬|Poodle;🐕|狗狗|Dog;🐈|猫咪|Cat;🐖|小猪|Pig;🦮|导盲犬|Guide Dog;🐑|绵羊|Sheep;🕊️|鸽子|Dove;🦩|火烈鸟|Flamingo;🦚|孔雀|Peacock;🦢|天鹅|Swan;🦥|树懒|Sloth;🦦|水獭|Otter;🦨|臭鼬|Skunk;🦘|袋鼠|Kangaroo;🦡|獾|Badger;🐾|爪印|Paw Prints;🦴|骨头|Bone;🎾|网球|Tennis Ball;🧶|毛线球|Yarn Ball"),
-    festival: P("🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🤶|圣诞奶奶|Mrs. Claus;🦌|驯鹿|Reindeer;⛄|雪人|Snowman;🎁|礼物|Gift;🔔|铃铛|Bell;🕯️|蜡烛|Candle;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|红灯笼|Red Lantern;🧧|红包|Red Envelope;🐉|龙|Dragon;🦁|舞狮|Lion Dance;🥮|月饼|Mooncake;🌕|满月|Full Moon;🐰|玉兔|Jade Rabbit;🎃|南瓜灯|Jack-o-Lantern;👻|幽灵|Ghost;🦇|蝙蝠|Bat;🕸️|蜘蛛网|Spider Web;🍬|糖果|Candy;🎭|面具|Mask;🎉|派对|Party;🎊|彩带球|Confetti;🎈|气球|Balloon;🥂|干杯|Cheers;🍾|香槟|Champagne;🎂|生日蛋糕|Birthday Cake;🕎|烛台|Menorah;🪔|油灯|Diya Lamp;🌙|弯月|Crescent Moon;🌟|闪亮星|Glowing Star;🎋|七夕竹|Tanabata;🎍|门松|Kadomatsu;🌸|樱花|Cherry Blossom;🎏|鲤鱼旗|Carp Streamer;🎐|风铃|Wind Chime;🥚|彩蛋|Easter Egg;🐣|复活节小鸡|Easter Chick;🐇|复活节兔子|Easter Bunny;🍫|巧克力|Chocolate;💝|爱心礼物|Heart Gift;💐|花束|Bouquet;🌹|玫瑰|Rose;👑|皇冠|Crown;🏆|奖杯|Trophy;🎖️|勋章|Medal;🪅|皮纳塔|Piñata;🎶|音乐|Music"),
-    jobs: P("🩺|听诊器|Stethoscope;💉|注射器|Syringe;💊|药丸|Pill;🌡️|温度计|Thermometer;🔬|显微镜|Microscope;🧪|试管|Test Tube;🧫|培养皿|Petri Dish;🔭|望远镜|Telescope;🚀|火箭|Rocket;✈️|飞机|Airplane;🚁|直升机|Helicopter;🚒|消防车|Fire Truck;🚓|警车|Police Car;🚑|救护车|Ambulance;🚜|拖拉机|Tractor;🚚|货车|Truck;🔧|扳手|Wrench;🔨|锤子|Hammer;⚙️|齿轮|Gear;🧰|工具箱|Toolbox;🍳|煎锅|Cooking Pan;🔪|菜刀|Kitchen Knife;🎨|调色板|Palette;🖌️|画笔|Paintbrush;✏️|铅笔|Pencil;📏|尺子|Ruler;✂️|剪刀|Scissors;📚|书本|Books;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;📷|相机|Camera;🎥|摄像机|Movie Camera;💼|公文包|Briefcase;🏥|医院|Hospital;🏫|学校|School;🏭|工厂|Factory;⛏️|镐子|Pick;🪓|斧头|Axe;⚖️|天平|Scales;🧲|磁铁|Magnet;🔩|螺母螺栓|Nut and Bolt;📐|三角尺|Triangular Ruler;📊|柱状图|Bar Chart;🩹|创可贴|Bandage;🧯|灭火器|Fire Extinguisher;🦺|安全背心|Safety Vest;⛑️|救援头盔|Rescue Helmet;🥽|护目镜|Goggles;🥼|实验服|Lab Coat;🧤|手套|Gloves;🎓|毕业帽|Graduation Cap;📋|剪贴板|Clipboard;🚢|轮船|Ship;🚂|火车|Train;🏗️|建筑工地|Construction;🛠️|锤子扳手|Hammer and Wrench;🌾|稻穗|Sheaf of Rice")
+    festival: P("🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🤶|圣诞奶奶|Mrs. Claus;🦌|驯鹿|Reindeer;⛄|雪人|Snowman;🎁|礼物|Gift;🔔|铃铛|Bell;🕯️|蜡烛|Candle;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|红灯笼|Red Lantern;🧧|红包|Red Envelope;🐉|龙|Dragon;🦁|舞狮|Lion Dance;🥮|月饼|Mooncake;🌕|满月|Full Moon;🐰|玉兔|Jade Rabbit;🎃|南瓜灯|Jack-o-Lantern;👻|幽灵|Ghost;🦇|蝙蝠|Bat;🕸️|蜘蛛网|Spider Web;🍬|糖果|Candy;🎭|面具|Mask;🎉|派对|Party;🎊|彩带球|Confetti;🎈|气球|Balloon;🥂|干杯|Cheers;🍾|香槟|Champagne;🎂|生日蛋糕|Birthday Cake;🕎|烛台|Menorah;🪔|油灯|Diya Lamp;🌙|弯月|Crescent Moon;🌟|闪亮星|Glowing Star;🎋|七夕竹|Tanabata;🎍|门松|Kadomatsu;🌸|樱花|Cherry Blossom;🎏|鲤鱼旗|Carp Streamer;🎐|风铃|Wind Chime;🥚|彩蛋|Easter Egg;🐣|复活节小鸡|Easter Chick;🐇|复活节兔子|Easter Bunny;🍫|巧克力|Chocolate;💝|爱心礼物|Heart Gift;💐|花束|Bouquet;🌹|玫瑰|Rose;👑|皇冠|Crown;🏆|奖杯|Trophy;🎖️|勋章|Medal;🎶|音乐|Music"),
+    jobs: P("🩺|听诊器|Stethoscope;💉|注射器|Syringe;💊|药丸|Pill;🌡️|温度计|Thermometer;🔬|显微镜|Microscope;🧪|试管|Test Tube;🧫|培养皿|Petri Dish;🔭|望远镜|Telescope;🚀|火箭|Rocket;✈️|飞机|Airplane;🚁|直升机|Helicopter;🚒|消防车|Fire Truck;🚓|警车|Police Car;🚑|救护车|Ambulance;🚜|拖拉机|Tractor;🚚|货车|Truck;🔧|扳手|Wrench;🔨|锤子|Hammer;⚙️|齿轮|Gear;🧰|工具箱|Toolbox;🍳|煎锅|Cooking Pan;🔪|菜刀|Kitchen Knife;🎨|调色板|Palette;🖌️|画笔|Paintbrush;✏️|铅笔|Pencil;📏|尺子|Ruler;✂️|剪刀|Scissors;📚|书本|Books;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;📷|相机|Camera;🎥|摄像机|Movie Camera;💼|公文包|Briefcase;🏥|医院|Hospital;🏫|学校|School;🏭|工厂|Factory;⛏️|镐子|Pick;🪓|斧头|Axe;⚖️|天平|Scales;🧲|磁铁|Magnet;🔩|螺母螺栓|Nut and Bolt;📐|三角尺|Triangular Ruler;📊|柱状图|Bar Chart;🩹|创可贴|Bandage;🧯|灭火器|Fire Extinguisher;🦺|安全背心|Safety Vest;⛑️|救援头盔|Rescue Helmet;🥽|护目镜|Goggles;🥼|实验服|Lab Coat;🧤|手套|Gloves;🎓|毕业帽|Graduation Cap;📋|剪贴板|Clipboard;🚢|轮船|Ship;🚂|火车|Train;🏗️|建筑工地|Construction;🛠️|锤子扳手|Hammer and Wrench;🌾|稻穗|Sheaf of Rice"),
+    shapes: P("🔴|红圆形|Red Circle;🟠|橙圆形|Orange Circle;🟡|黄圆形|Yellow Circle;🟢|绿圆形|Green Circle;🔵|蓝圆形|Blue Circle;🟣|紫圆形|Purple Circle;⚫|黑圆形|Black Circle;⚪|白圆形|White Circle;🟤|棕圆形|Brown Circle;🟥|红方形|Red Square;🟧|橙方形|Orange Square;🟨|黄方形|Yellow Square;🟩|绿方形|Green Square;🟦|蓝方形|Blue Square;🟪|紫方形|Purple Square;⬛|黑方形|Black Square;⬜|白方形|White Square;🟫|棕方形|Brown Square;❤️|红爱心|Red Heart;🧡|橙爱心|Orange Heart;💛|黄爱心|Yellow Heart;💚|绿爱心|Green Heart;💙|蓝爱心|Blue Heart;💜|紫爱心|Purple Heart;🖤|黑爱心|Black Heart;🤍|白爱心|White Heart;🤎|棕爱心|Brown Heart;⭐|星星|Star;🌟|闪亮星星|Glowing Star;💠|蓝色菱形|Blue Diamond;🔷|大蓝菱形|Large Blue Diamond;🔶|大橙菱形|Large Orange Diamond;🔹|小蓝菱形|Small Blue Diamond;🔸|小橙菱形|Small Orange Diamond;🔺|红三角|Red Triangle Up;🔻|红倒三角|Red Triangle Down;🔼|上三角|Triangle Up;🔽|下三角|Triangle Down;🌕|圆月亮|Full Moon;🌙|弯月亮|Crescent Moon;☀️|太阳|Sun;⭕|红圆圈|Red Circle Mark;🔳|白方按钮|White Square Button;🔲|黑方按钮|Black Square Button"),
+    numbers: P("0|数字 0|Number 0;1|数字 1|Number 1;2|数字 2|Number 2;3|数字 3|Number 3;4|数字 4|Number 4;5|数字 5|Number 5;6|数字 6|Number 6;7|数字 7|Number 7;8|数字 8|Number 8;9|数字 9|Number 9;10|数字 10|Number 10;11|数字 11|Number 11;12|数字 12|Number 12;13|数字 13|Number 13;14|数字 14|Number 14;15|数字 15|Number 15;16|数字 16|Number 16;17|数字 17|Number 17;18|数字 18|Number 18;19|数字 19|Number 19;20|数字 20|Number 20;21|数字 21|Number 21;22|数字 22|Number 22;23|数字 23|Number 23;24|数字 24|Number 24;25|数字 25|Number 25;26|数字 26|Number 26;27|数字 27|Number 27;28|数字 28|Number 28;29|数字 29|Number 29;30|数字 30|Number 30"),
+    letters: P("A|字母 A|Letter A;B|字母 B|Letter B;C|字母 C|Letter C;D|字母 D|Letter D;E|字母 E|Letter E;F|字母 F|Letter F;G|字母 G|Letter G;H|字母 H|Letter H;I|字母 I|Letter I;J|字母 J|Letter J;K|字母 K|Letter K;L|字母 L|Letter L;M|字母 M|Letter M;N|字母 N|Letter N;O|字母 O|Letter O;P|字母 P|Letter P;Q|字母 Q|Letter Q;R|字母 R|Letter R;S|字母 S|Letter S;T|字母 T|Letter T;U|字母 U|Letter U;V|字母 V|Letter V;W|字母 W|Letter W;X|字母 X|Letter X;Y|字母 Y|Letter Y;Z|字母 Z|Letter Z"),
+    emotions: P("😀|开心大笑|Grinning;😃|笑眼|Big Smile;😄|眯眼笑|Happy Smile;😁|露齿笑|Beaming;😆|大笑|Laughing;😅|流汗笑|Sweaty Smile;😂|笑哭|Tears of Joy;🤣|笑倒|Rolling Laugh;😊|微笑|Smiling;😇|天使笑|Angel Smile;🙂|淡淡笑|Slight Smile;🙃|倒脸笑|Upside Down;😉|眨眼|Winking;😌|安心|Relieved;😍|爱心眼|Heart Eyes;🥰|幸福笑|Loved Smile;😘|飞吻|Blowing Kiss;😗|亲亲|Kissing;😙|闭眼亲|Kiss Smile;😚|害羞亲|Shy Kiss;😋|好吃脸|Yummy;😛|吐舌头|Tongue Out;😝|调皮脸|Silly Face;😜|眨眼吐舌|Winking Tongue;🤪|搞怪脸|Zany Face;😎|墨镜脸|Cool Shades;🥳|派对脸|Party Face;😏|得意脸|Smirk;🙄|翻白眼|Eye Roll;😬|龇牙脸|Grimacing;🤗|拥抱脸|Hugging;🤔|思考脸|Thinking;🤭|捂嘴笑|Giggling;🤫|嘘声脸|Shushing;😴|睡觉脸|Sleepy;😪|困倦脸|Drowsy;🥱|打哈欠|Yawning;😷|口罩脸|Mask Face;🤒|生病脸|Sick Face;🥴|晕乎脸|Woozy;😵|晕倒脸|Dizzy;🤯|爆炸头|Exploding Head;🥵|热脸|Hot Face;🥶|冷脸|Cold Face;😱|惊吓脸|Screaming;😨|害怕脸|Fearful;😰|焦虑脸|Anxious;😢|流泪脸|Crying;😭|大哭脸|Loudly Crying;🥺|委屈脸|Pleading"),
+    body: P("👀|眼睛|Eyes;👁️|一只眼睛|Eye;👂|耳朵|Ear;👃|鼻子|Nose;👄|嘴巴|Mouth;👅|舌头|Tongue;🦷|牙齿|Tooth;🧠|大脑|Brain;❤️|心脏|Heart;🦴|骨头|Bone;💪|手臂肌肉|Strong Arm;✋|手掌|Raised Hand;🤚|手背|Back of Hand;🖐️|五指张开|Open Hand;🖖|打招呼手|Vulcan Hand;👌|OK 手势|OK Hand;🤏|捏一捏|Pinching Hand;✌️|胜利手势|Victory Hand;🤞|许愿手势|Crossed Fingers;🤟|我爱你手势|Love-You Hand;🤙|打电话手势|Call-Me Hand;👍|大拇指赞|Thumbs Up;👎|大拇指倒|Thumbs Down;👊|拳头|Fist;✊|握拳|Raised Fist;👏|拍手|Clapping;🙌|举手欢呼|Raised Hands;👐|拥抱手|Open Hands;🤲|双手托起|Palms Up;🙏|合十手|Folded Hands;✍️|写字手|Writing Hand;💅|涂指甲|Nail Polish;🦵|大腿|Leg;🦶|脚丫|Foot;👣|脚印|Footprints;🦾|机械手臂|Mechanical Arm"),
+    clothes: P("👕|T恤|T-Shirt;👖|牛仔裤|Jeans;👗|连衣裙|Dress;👔|衬衫领带|Shirt and Tie;👚|女装上衣|Blouse;👘|和服|Kimono;🥻|纱丽|Sari;🩱|连体泳衣|Swimsuit;🩳|短裤|Shorts;👞|皮鞋|Dress Shoe;👟|运动鞋|Sneaker;🥾|靴子|Hiking Boot;🥿|平底鞋|Flat Shoe;👠|高跟鞋|High Heel;👡|凉鞋|Sandal;👢|长靴|Boot;👒|草帽|Sun Hat;🎩|礼帽|Top Hat;🧢|棒球帽|Cap;👑|皇冠|Crown;👓|眼镜|Glasses;🕶️|墨镜|Sunglasses;🥽|护目镜|Goggles;🧣|围巾|Scarf;🧤|手套|Gloves;🧥|外套|Coat;🥼|白大褂|Lab Coat;🦺|安全背心|Safety Vest;⛑️|头盔|Helmet;🎒|双肩包|Backpack;👝|手包|Clutch;👛|钱包|Purse;👜|手提包|Handbag;💼|公文包|Briefcase;🌂|雨伞|Umbrella;☂️|撑开的伞|Open Umbrella;🧦|袜子|Socks;🩰|芭蕾舞鞋|Ballet Shoes"),
+    home: P("🛏️|床|Bed;🛋️|沙发|Sofa;🪑|椅子|Chair;🚪|门|Door;🛁|浴缸|Bathtub;🚿|淋浴|Shower;🚽|马桶|Toilet;🧻|卷纸|Toilet Paper;🧴|乳液瓶|Lotion Bottle;🧼|肥皂|Soap;🧽|海绵|Sponge;🧺|篮子|Basket;🧹|扫帚|Broom;🔑|钥匙|Key;🗝️|老钥匙|Old Key;✂️|剪刀|Scissors;🧷|别针|Safety Pin;🧵|线轴|Thread;🕯️|蜡烛|Candle;🔦|手电筒|Flashlight;💡|灯泡|Light Bulb;⏰|闹钟|Alarm Clock;🕰️|座钟|Mantel Clock;📺|电视|Television;📻|收音机|Radio;📱|手机|Phone;☎️|电话|Telephone;💻|电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;🖱️|鼠标|Mouse;📚|书本|Books;✏️|铅笔|Pencil;🍽️|餐盘|Plate Setting;🥄|勺子|Spoon;🍴|叉子|Fork;🥢|筷子|Chopsticks;🍵|茶杯|Teacup;☕|咖啡杯|Coffee Cup;🧸|泰迪熊|Teddy Bear;🖼️|相框|Picture Frame;🗓️|日历|Calendar;🛒|购物车|Shopping Cart;🧰|工具箱|Toolbox;🔧|扳手|Wrench;🔨|锤子|Hammer;🔩|螺丝|Bolt;🧯|灭火器|Fire Extinguisher;🧲|磁铁|Magnet;🔔|铃铛|Bell"),
+    farm: P("🐄|奶牛|Cow;🐖|猪|Pig;🐎|马|Horse;🐏|公羊|Ram;🐐|山羊|Goat;🐓|公鸡|Rooster;🐔|母鸡|Chicken;🐣|小鸡宝宝|Baby Chick;🐤|小鸡|Chick;🦆|鸭子|Duck;🐕|农场狗|Farm Dog;🐈|农场猫|Farm Cat;🐇|兔子|Rabbit;🦃|火鸡|Turkey;🐂|公牛|Ox;🐃|水牛|Water Buffalo;🐮|牛脸|Cow Face;🐷|猪脸|Pig Face;🐴|马脸|Horse Face;🐑|绵羊|Sheep;🐰|兔脸|Rabbit Face;🐶|狗脸|Dog Face;🐱|猫脸|Cat Face;🐭|老鼠|Mouse;🦊|狐狸|Fox;🌾|稻穗|Rice Sheaf;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🎃|南瓜|Pumpkin;🍎|苹果|Apple;🍐|梨子|Pear;🍓|草莓|Strawberry;🍇|葡萄|Grapes;🍉|西瓜|Watermelon;🍅|番茄|Tomato;🥒|黄瓜|Cucumber;🥬|青菜|Lettuce;🌻|向日葵|Sunflower;🚜|拖拉机|Tractor;🥚|鸡蛋|Egg;🥛|牛奶|Milk;🧀|奶酪|Cheese;🌱|秧苗|Seedling;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐞|瓢虫|Ladybug;🏡|农舍|Farm House;🧺|采摘篮|Basket"),
+    seasons: P("🌸|樱花|Cherry Blossom;🌷|郁金香|Tulip;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌼|小雏菊|Daisy;🌺|扶桑花|Hibiscus;🌱|新芽|Sprout;🌿|绿叶|Herb;🍀|四叶草|Clover;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌤️|晴天|Sunny Day;⛅|多云|Partly Cloudy;🏖️|沙滩|Beach;🍉|西瓜|Watermelon;🍦|冰淇淋|Ice Cream;🕶️|墨镜|Sunglasses;⛱️|沙滩伞|Beach Umbrella;🌊|海浪|Wave;🏄|冲浪|Surfing;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🍃|飘叶|Leaf in Wind;🎃|南瓜|Pumpkin;🌾|稻田|Rice Field;🍎|苹果|Apple;🍐|梨|Pear;🍇|葡萄|Grapes;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;❄️|雪花|Snowflake;☃️|大雪人|Big Snowman;⛄|雪人|Snowman;🌨️|下雪|Snowfall;🧣|围巾|Scarf;🧤|手套|Gloves;🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🦌|驯鹿|Reindeer;🔥|篝火|Fire;☕|热咖啡|Hot Coffee;🍵|热茶|Hot Tea;🌙|月亮|Moon;⭐|星星|Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|灯笼|Lantern;🌕|满月|Full Moon;🥮|月饼|Mooncake"),
+    school: P("📚|书堆|Books;📖|打开的书|Open Book;📓|笔记本|Notebook;📒|账本|Ledger;📔|日记本|Diary;📕|红书|Red Book;📗|绿书|Green Book;📘|蓝书|Blue Book;📙|橙书|Orange Book;📝|备忘录|Memo;✏️|铅笔|Pencil;✒️|钢笔尖|Pen Nib;🖊️|圆珠笔|Pen;🖋️|钢笔|Fountain Pen;🖍️|蜡笔|Crayon;📏|直尺|Ruler;📐|三角尺|Triangle Ruler;✂️|剪刀|Scissors;📌|图钉|Pushpin;📍|圆图钉|Round Pin;📎|回形针|Paperclip;🖇️|连环回形针|Linked Clips;📋|写字板|Clipboard;📁|文件夹|Folder;📂|打开的文件夹|Open Folder;🎒|书包|Backpack;🔔|上课铃|School Bell;🔍|放大镜|Magnifier;🧲|磁铁|Magnet;🌍|地球仪|Globe;🎨|调色盘|Art Palette;🖌️|画笔|Paintbrush;⚽|足球|Soccer Ball;🏀|篮球|Basketball;🎵|音符|Music Note;📷|相机|Camera;⏰|闹钟|Alarm Clock;💡|灯泡|Light Bulb;🔑|钥匙|Key;🧮|算盘|Abacus;🔬|显微镜|Microscope;🔭|望远镜|Telescope;🧪|试管|Test Tube;📊|图表|Chart;🗺️|地图|Map;🖥️|台式电脑|Desktop;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖱️|鼠标|Mouse;🗑️|废纸篓|Waste Basket")
   };
 
-  /* ---------------- 牌背：10 种 ---------------- */
+  /* ---------------- 牌背：16 种 ---------------- */
   var BACK_META = [
     ["sun","☀️","太阳","Sun"],["wave","🌊","海浪","Wave"],["star","🌙","星空","Starry"],["rainbow","🌈","彩虹","Rainbow"],["leaf","🍃","叶子","Leaf"],
-    ["gem","💎","宝石","Gem"],["candy","🍬","糖果","Candy"],["cloud","☁️","云朵","Cloud"],["heart","❤️","爱心","Heart"],["flower","🌸","花朵","Flower"]
+    ["gem","💎","宝石","Gem"],["candy","🍬","糖果","Candy"],["cloud","☁️","云朵","Cloud"],["heart","❤️","爱心","Heart"],["flower","🌸","花朵","Flower"],
+    ["balloon","🎈","气球","Balloon"],["panda","🐼","熊猫","Panda"],["cat","🐱","猫咪","Cat"],["strawberry","🍓","草莓","Strawberry"],["rocket","🚀","火箭","Rocket"],["fish","🐠","小鱼","Fish"]
   ];
   var BACK_ART = {
     sun: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><g stroke="#ffd76a" stroke-width="5" stroke-linecap="round"><line x1="50" y1="6" x2="50" y2="18"/><line x1="50" y1="82" x2="50" y2="94"/><line x1="6" y1="50" x2="18" y2="50"/><line x1="82" y1="50" x2="94" y2="50"/><line x1="19" y1="19" x2="27" y2="27"/><line x1="73" y1="73" x2="81" y2="81"/><line x1="81" y1="19" x2="73" y2="27"/><line x1="27" y1="73" x2="19" y2="81"/></g><circle cx="50" cy="50" r="17" fill="#ffd76a"/><circle cx="44" cy="47" r="2.4" fill="#b97a1e"/><circle cx="56" cy="47" r="2.4" fill="#b97a1e"/><path d="M43 55 Q50 61 57 55" stroke="#b97a1e" stroke-width="2.6" stroke-linecap="round"/></svg>',
@@ -617,7 +738,13 @@
     candy: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M14 38 L30 50 L14 62 Z" fill="#ffe3ee"/><path d="M86 38 L70 50 L86 62 Z" fill="#ffe3ee"/><circle cx="50" cy="50" r="21" fill="#fff3f8"/><path d="M36 40 A17 17 0 0 1 62 36" stroke="#ff5e8a" stroke-width="6" stroke-linecap="round"/><path d="M34 56 A17 17 0 0 0 60 66" stroke="#ffb84d" stroke-width="6" stroke-linecap="round"/></svg>',
     cloud: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><g fill="#ffffff"><circle cx="36" cy="58" r="15"/><circle cx="54" cy="46" r="19"/><circle cx="68" cy="59" r="13"/><rect x="24" y="52" width="56" height="18" rx="9"/></g><g fill="#ffe9a8"><circle cx="24" cy="26" r="2.6"/><circle cx="80" cy="22" r="2.2"/><circle cx="66" cy="82" r="2.4"/></g></svg>',
     heart: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M50 84 C20 62 14 40 26 27 C37 15 50 24 50 34 C50 24 63 15 74 27 C86 40 80 62 50 84 Z" fill="#ffd3e0"/><path d="M34 34 C29 40 30 48 35 54" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" opacity=".85"/></svg>',
-    flower: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><g fill="#ffe9f4"><circle cx="50" cy="30" r="13"/><circle cx="69" cy="44" r="13"/><circle cx="62" cy="66" r="13"/><circle cx="38" cy="66" r="13"/><circle cx="31" cy="44" r="13"/></g><circle cx="50" cy="49" r="10" fill="#ffd76a"/></svg>'
+    flower: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><g fill="#ffe9f4"><circle cx="50" cy="30" r="13"/><circle cx="69" cy="44" r="13"/><circle cx="62" cy="66" r="13"/><circle cx="38" cy="66" r="13"/><circle cx="31" cy="44" r="13"/></g><circle cx="50" cy="49" r="10" fill="#ffd76a"/></svg>',
+    balloon: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><ellipse cx="50" cy="36" rx="24" ry="28" fill="#ff6b81"/><path d="M38 22 A26 30 0 0 1 52 10" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity=".7"/><path d="M46 64 h8 l-4 7 z" fill="#e5484d"/><path d="M50 71 C44 78 56 82 50 90" stroke="#fff3f8" stroke-width="3.4" stroke-linecap="round"/></svg>',
+    panda: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><circle cx="28" cy="24" r="12" fill="#2b2b30"/><circle cx="72" cy="24" r="12" fill="#2b2b30"/><circle cx="50" cy="54" r="34" fill="#ffffff"/><ellipse cx="38" cy="50" rx="6.5" ry="8.5" fill="#2b2b30" transform="rotate(-18 38 50)"/><ellipse cx="62" cy="50" rx="6.5" ry="8.5" fill="#2b2b30" transform="rotate(18 62 50)"/><circle cx="39" cy="49" r="2.4" fill="#ffffff"/><circle cx="61" cy="49" r="2.4" fill="#ffffff"/><ellipse cx="50" cy="61" rx="4.6" ry="3.4" fill="#2b2b30"/><path d="M44 69 Q50 73 56 69" stroke="#2b2b30" stroke-width="2.6" stroke-linecap="round"/></svg>',
+    cat: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M24 40 L20 14 L44 26 Z" fill="#ffb84d"/><path d="M76 40 L80 14 L56 26 Z" fill="#ffb84d"/><path d="M27 36 L24 20 L40 28 Z" fill="#ff9db0"/><path d="M73 36 L76 20 L60 28 Z" fill="#ff9db0"/><circle cx="50" cy="56" r="32" fill="#ffd9a0"/><circle cx="38" cy="52" r="3.4" fill="#5b3a1a"/><circle cx="62" cy="52" r="3.4" fill="#5b3a1a"/><path d="M46 62 h8 l-4 5 z" fill="#e56b8c"/><path d="M50 67 v4 M50 71 Q44 76 38 72 M50 71 Q56 76 62 72" stroke="#5b3a1a" stroke-width="2.4" stroke-linecap="round" fill="none"/><g stroke="#5b3a1a" stroke-width="2.2" stroke-linecap="round" opacity=".6"><path d="M8 56 h16 M10 66 l15 -3 M92 56 H76 M90 66 l-15 -3"/></g></svg>',
+    strawberry: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M50 90 C28 72 18 54 20 40 C22 26 36 22 50 30 C64 22 78 26 80 40 C82 54 72 72 50 90 Z" fill="#ff5e6c"/><path d="M50 30 C46 20 38 14 28 14 C34 24 42 29 50 30 C58 29 66 24 72 14 C62 14 54 20 50 30 Z" fill="#57c46a"/><path d="M50 28 V14" stroke="#3d9950" stroke-width="4" stroke-linecap="round"/><g fill="#ffe9a8"><ellipse cx="36" cy="46" rx="2.2" ry="3.2"/><ellipse cx="50" cy="42" rx="2.2" ry="3.2"/><ellipse cx="64" cy="46" rx="2.2" ry="3.2"/><ellipse cx="42" cy="60" rx="2.2" ry="3.2"/><ellipse cx="58" cy="60" rx="2.2" ry="3.2"/><ellipse cx="50" cy="74" rx="2.2" ry="3.2"/></g></svg>',
+    rocket: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M50 6 C62 18 66 34 64 52 L36 52 C34 34 38 18 50 6 Z" fill="#f2f6ff"/><circle cx="50" cy="32" r="8" fill="#7ec8e3" stroke="#3a6db0" stroke-width="3"/><path d="M36 46 C28 54 24 64 24 74 L36 64 Z" fill="#ff6b5e"/><path d="M64 46 C72 54 76 64 76 74 L64 64 Z" fill="#ff6b5e"/><rect x="42" y="52" width="16" height="7" fill="#ffb84d"/><path d="M50 62 C45 72 44 82 50 94 C56 82 55 72 50 62 Z" fill="#ffb84d"/><path d="M50 70 C47 77 47 83 50 88 C53 83 53 77 50 70 Z" fill="#ff8a5c"/></svg>',
+    fish: '<svg class="motif" viewBox="0 0 100 100" fill="none" aria-hidden="true"><path d="M12 50 L1 34 L1 66 Z" fill="#ff8a5c"/><path d="M10 50 C24 32 42 25 57 29 C73 33 84 41 88 50 C84 59 73 67 57 71 C42 75 24 68 10 50 Z" fill="#ffb84d"/><circle cx="68" cy="44" r="4" fill="#263238"/><path d="M40 30 C36 42 36 58 40 70" stroke="#ff8a5c" stroke-width="4" stroke-linecap="round" fill="none"/><path d="M56 28 C52 40 52 60 56 72" stroke="#ff8a5c" stroke-width="4" stroke-linecap="round" opacity=".7" fill="none"/><g fill="#d8f4ff"><circle cx="22" cy="18" r="3"/><circle cx="34" cy="10" r="2.2"/><circle cx="80" cy="16" r="2.6"/></g></svg>'
   };
 
   /* ---------------- 难度 / 颜色 ---------------- */
@@ -638,7 +765,7 @@
     lang:"zh", kids:false, helper:"B",
     fxBurst:true, fxBounce:true, fxArp:true, fxStarFly:true, fxMascot:true, fxFireworks:true,
     fxBigWord:true, fxFountain:true, fxRibbons:true,
-    voice:false, soundOn:true, vibrateOn:true, names:["","","",""]
+    voice:false, collect:true, soundOn:true, vibrateOn:true, names:["","","",""]
   };
   try{
     var saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
@@ -756,40 +883,80 @@
   wireSeg("segDiff", function(v){ settings.diff = v; });
   wireSeg("segHelper", function(v){ settings.helper = v; });
   wireSeg("segLang", function(v){ settings.lang = v; applyLang(); renderNameInputs(); updateStartBtn(); });
-  wireSeg("segTheme", function(v){ settings.theme = v; });
-  wireSeg("segBack", function(v){ settings.back = v; });
 
   function themeName(key){ for(var i=0;i<THEME_META.length;i++){ if(THEME_META[i][0] === key) return settings.lang === "en" ? THEME_META[i][3] : THEME_META[i][2]; } return key; }
   function backName(key){ for(var i=0;i<BACK_META.length;i++){ if(BACK_META[i][0] === key) return settings.lang === "en" ? BACK_META[i][3] : BACK_META[i][2]; } return key; }
   function effTheme(){ return settings.theme === "random" ? THEME_META[Math.floor(Math.random()*THEME_META.length)][0] : settings.theme; }
   function effBack(){ return settings.back === "random" ? BACK_META[Math.floor(Math.random()*BACK_META.length)][0] : settings.back; }
-  function buildLookSegs(){
-    var th = $("segTheme"); th.innerHTML = "";
-    var rb = document.createElement("button"); rb.type = "button"; rb.setAttribute("data-v", "random");
-    rb.textContent = T().randomLbl;
-    th.appendChild(rb);
-    THEME_META.forEach(function(m){
-      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-v", m[0]);
-      b.textContent = m[1] + " " + (settings.lang === "en" ? m[3] : m[2]);
-      th.appendChild(b);
-    });
-    var bk = $("segBack"); bk.innerHTML = "";
-    var rb2 = document.createElement("button"); rb2.type = "button"; rb2.setAttribute("data-v", "random");
-    rb2.textContent = T().randomLbl;
-    bk.appendChild(rb2);
-    BACK_META.forEach(function(m){
-      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-v", m[0]);
-      b.textContent = m[1] + " " + (settings.lang === "en" ? m[3] : m[2]);
-      bk.appendChild(b);
-    });
-    markSeg("segTheme", settings.theme); markSeg("segBack", settings.back);
+  /* 外观：摘要行 + 全屏选择器 */
+  function themeMeta(key){ for(var i=0;i<THEME_META.length;i++){ if(THEME_META[i][0] === key) return THEME_META[i]; } return null; }
+  function backMeta(key){ for(var i=0;i<BACK_META.length;i++){ if(BACK_META[i][0] === key) return BACK_META[i]; } return null; }
+  function updateLookSummary(){
+    var tt = $("lookThemeThumb"), tv = $("lookThemeVal");
+    if(settings.theme === "random"){ tt.textContent = "🎲"; tv.textContent = T().randomLbl; }
+    else { var m = themeMeta(settings.theme); tt.textContent = m ? m[1] : "🎴"; tv.textContent = themeName(settings.theme); }
+    var bt = $("lookBackThumb"), bv = $("lookBackVal");
+    if(settings.back === "random"){ bt.textContent = "🎲"; bv.textContent = T().randomLbl; }
+    else {
+      bt.innerHTML = "";
+      var mc = document.createElement("span"); mc.className = "mini-card pat-" + settings.back;
+      mc.innerHTML = BACK_ART[settings.back] || "";
+      bt.appendChild(mc);
+      bv.textContent = backName(settings.back);
+    }
   }
+  function buildPickers(){
+    var tg = $("themeGrid"); tg.innerHTML = "";
+    var rb = document.createElement("button"); rb.type = "button"; rb.className = "pick-chip";
+    rb.setAttribute("data-v", "random");
+    rb.innerHTML = '<span class="pc-emoji">🎲</span><span>' + escapeHtml(settings.lang === "en" ? "Random" : "随机") + "</span>";
+    tg.appendChild(rb);
+    THEME_META.forEach(function(m){
+      var b = document.createElement("button"); b.type = "button"; b.className = "pick-chip";
+      b.setAttribute("data-v", m[0]);
+      b.innerHTML = '<span class="pc-emoji">' + m[1] + "</span><span>" + escapeHtml(settings.lang === "en" ? m[3] : m[2]) + "</span>";
+      tg.appendChild(b);
+    });
+    tg.querySelectorAll("button").forEach(function(b){ b.classList.toggle("sel", b.getAttribute("data-v") === settings.theme); });
+    var bg = $("backGrid"); bg.innerHTML = "";
+    var rb2 = document.createElement("button"); rb2.type = "button"; rb2.className = "pick-chip back-chip";
+    rb2.setAttribute("data-v", "random");
+    rb2.innerHTML = '<span class="pc-dice">🎲</span><span>' + escapeHtml(settings.lang === "en" ? "Random" : "随机") + "</span>";
+    bg.appendChild(rb2);
+    BACK_META.forEach(function(m){
+      var b = document.createElement("button"); b.type = "button"; b.className = "pick-chip back-chip";
+      b.setAttribute("data-v", m[0]);
+      b.innerHTML = '<span class="mini-card pat-' + m[0] + '">' + (BACK_ART[m[0]] || "") + "</span><span>" + escapeHtml(settings.lang === "en" ? m[3] : m[2]) + "</span>";
+      bg.appendChild(b);
+    });
+    bg.querySelectorAll("button").forEach(function(b){ b.classList.toggle("sel", b.getAttribute("data-v") === settings.back); });
+    updateLookSummary();
+  }
+  function openPicker(id){ $(id).hidden = false; sfx("flip"); }
+  function closePickers(){ $("themePicker").hidden = true; $("backPicker").hidden = true; }
+  $("btnPickTheme").addEventListener("click", function(){ buildPickers(); openPicker("themePicker"); });
+  $("btnPickBack").addEventListener("click", function(){ buildPickers(); openPicker("backPicker"); });
+  $("btnThemePickerClose").addEventListener("click", closePickers);
+  $("btnBackPickerClose").addEventListener("click", closePickers);
+  $("themePicker").addEventListener("click", function(e){ if(e.target === this) closePickers(); });
+  $("backPicker").addEventListener("click", function(e){ if(e.target === this) closePickers(); });
+  $("themeGrid").addEventListener("click", function(e){
+    var btn = e.target.closest("button"); if(!btn) return;
+    settings.theme = btn.getAttribute("data-v");
+    saveSettings(); buildPickers(); closePickers(); sfx("flip");
+  });
+  $("backGrid").addEventListener("click", function(e){
+    var btn = e.target.closest("button"); if(!btn) return;
+    settings.back = btn.getAttribute("data-v");
+    saveSettings(); buildPickers(); closePickers(); sfx("flip");
+  });
 
   /* ---------------- 设置页：开关 ---------------- */
   function setSwitch(el, on){ if(el) el.setAttribute("aria-pressed", on ? "true" : "false"); }
   function syncSwitches(){
     setSwitch($("swKids"), settings.kids);
     setSwitch($("swVoice"), settings.voice);
+    setSwitch($("swCollect"), settings.collect);
     setSwitch($("swSound"), settings.soundOn);
     setSwitch($("swVibrate"), settings.vibrateOn);
     document.querySelectorAll(".fx-sw").forEach(function(sw){ setSwitch(sw, !!settings[sw.getAttribute("data-k")]); });
@@ -806,6 +973,7 @@
   }
   bindSwitch("swKids", function(){ settings.kids = !settings.kids; });
   bindSwitch("swVoice", function(){ settings.voice = !settings.voice; if(settings.voice) unlockVoice(); });
+  bindSwitch("swCollect", function(){ settings.collect = !settings.collect; });
   bindSwitch("swSound", function(){ settings.soundOn = !settings.soundOn; toast(settings.soundOn ? T().soundOnToast : T().soundOffToast); });
   bindSwitch("swVibrate", function(){ settings.vibrateOn = !settings.vibrateOn; if(settings.vibrateOn) buzz(30); toast(settings.vibrateOn ? T().vibOnToast : T().vibOffToast); });
   document.querySelectorAll(".fx-sw").forEach(function(sw){
@@ -890,7 +1058,7 @@
     var rl = $("rulesList"); rl.innerHTML = "";
     t.rules.forEach(function(r){ var li = document.createElement("li"); li.textContent = r; rl.appendChild(li); });
     $("tbPrefix").textContent = t.bannerPre; $("tbSuffix").textContent = t.bannerSuf;
-    buildLookSegs();
+    buildPickers();
     syncPreviewUI();
     updateStartBtn();
     if(!gameActive && !previewState){ $("turnText").textContent = t.readyMsg; }
@@ -928,7 +1096,7 @@
     clearInterval(timerId); timerId = null;
     $("clock").textContent = "00:00";
     $("clockWrap").style.display = settings.kids ? "none" : "";
-    $("collectBar").hidden = !settings.kids;
+    $("collectBar").hidden = !(settings.kids && settings.collect);
     $("collectItems").innerHTML = "";
     $("setupBack").hidden = true;
     $("endBack").hidden = true;
@@ -975,7 +1143,7 @@
         '<span class="inner">'
         + '<span class="face back pat-' + gameBack + '">' + BACK_ART[gameBack] + '<span class="foot" aria-hidden="true">👣</span><span class="hint">MEMORY</span></span>'
         + '<span class="face front" style="background:linear-gradient(160deg, hsl(' + card.hue + ',85%,93%), hsl(' + card.hue + ',78%,84%))">'
-        + '<span class="glyph">' + (card.glyph && card.glyph.trim() ? card.glyph : "🎴") + '</span>'
+        + '<span class="glyph' + (/^[0-9A-Za-z]+$/.test(card.glyph) ? (card.glyph.length > 1 ? " txt2" : " txt") : "") + '">' + (card.glyph && card.glyph.trim() ? card.glyph : "🎴") + '</span>'
         + '<span class="lbl">' + escapeHtml(card.label) + '</span></span>'
         + '</span>';
       btn.addEventListener("click", function(){ onFlip(btn, card); });
@@ -1194,8 +1362,8 @@
       })(i);
     }
   }
-  function flyStar(fromEl, playerIdx){
-    var chip = scoreEl.children[playerIdx];
+  function flyStar(fromEl, playerIdx, targetEl){
+    var chip = targetEl || scoreEl.children[playerIdx];
     if(!chip) return;
     var r1 = fromEl.getBoundingClientRect(), r2 = chip.getBoundingClientRect();
     var s = document.createElement("span");
@@ -1404,16 +1572,42 @@
   }
 
   /* ---------------- 按钮 ---------------- */
-  $("btnFxPreview").addEventListener("click", function(){
-    var anchor = this;
-    if(settings.fxBurst) spawnBurst(anchor);
-    if(settings.fxFountain) spawnFountain(anchor);
-    if(settings.fxBigWord) showBigWord();
-    if(settings.fxRibbons) fireRibbons();
-    if(settings.fxMascot) showMascot();
+  /* 特效预览：隐藏设置层，在最顶层舞台完整播放一次全套配对特效，约 1.6 秒后恢复设置（Tab 与选择状态不变） */
+  var fxPreviewing = false, fxPreviewTimer = null;
+  function endFxPreview(){
+    if(!fxPreviewing) return;
+    fxPreviewing = false;
+    clearTimeout(fxPreviewTimer); fxPreviewTimer = null;
+    $("fxStage").hidden = true;
+    $("setupBack").classList.remove("fx-hidden");
+    document.body.classList.remove("fx-previewing");
+  }
+  function playFxPreview(){
+    if(fxPreviewing) return;
+    fxPreviewing = true;
+    var pool = THEMES[effTheme()] || [];
+    var glyph = "🦊";
+    for(var i=0;i<pool.length;i++){ if(pool[i].glyph && /^[^\x00-\x7F]/.test(pool[i].glyph)){ glyph = pool[i].glyph; break; } }
+    document.querySelectorAll(".fx-demo-glyph").forEach(function(el){ el.textContent = glyph; });
+    $("fxDemoScoreNum").textContent = "0";
+    $("setupBack").classList.add("fx-hidden");
+    document.body.classList.add("fx-previewing");
+    $("fxStage").hidden = false;
+    var cardA = $("fxDemoCardA"), cardB = $("fxDemoCardB");
+    [cardA, cardB].forEach(function(c){ c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); });
+    spawnBurst(cardA); spawnBurst(cardB);
+    spawnFountain(cardA); spawnFountain(cardB);
+    showBigWord();
+    fireRibbons();
+    showMascot();
+    flyStar(cardA, 0, $("fxDemoScore"));
+    setTimeout(function(){ $("fxDemoScoreNum").textContent = "1"; }, 700);
     if(settings.fxArp) sfx("arp"); else sfx("match");
     buzz(35);
-  });
+    fxPreviewTimer = setTimeout(endFxPreview, 1600);
+  }
+  $("btnFxPreview").addEventListener("click", playFxPreview);
+  $("fxStage").addEventListener("click", endFxPreview);
   $("btnStart").addEventListener("click", function(){ unlockVoice(); sfx("match"); startGame(); });
   $("btnAgain").addEventListener("click", function(){ unlockVoice(); startGame(); });
   $("btnChange").addEventListener("click", function(){ $("endBack").hidden = true; $("setupBack").hidden = false; });
