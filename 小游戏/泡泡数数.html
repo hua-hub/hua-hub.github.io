@@ -1,0 +1,2447 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>泡泡乐园</title>
+<style>
+  :root{
+    --ink:#5b4632; --ink-soft:#8a715a;
+    --card:#fffdf7; --line:#e8d9c3;
+    --accent:#f2a65a; --accent-soft:#fdeeda;
+    --shadow:0 4px 14px rgba(120,84,40,.12);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0; color:var(--ink); overflow:hidden;
+    font-family:ui-rounded,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+    user-select:none; -webkit-user-select:none; touch-action:manipulation;
+  }
+  button{ font:inherit; color:inherit; border:none; background:none; cursor:pointer; min-height:44px; }
+  button:active{ transform:scale(.96); }
+
+  /* ============ 全屏游戏区（背景即游戏区） ============ */
+  #app{
+    position:fixed; inset:0; height:100dvh; overflow:hidden;
+    transition:background 1.2s ease;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #scene{ position:absolute; inset:0; pointer-events:none; z-index:0; }
+  #scene svg{ position:absolute; left:0; bottom:0; width:100%; height:34%; }
+  .cloud{
+    position:absolute; border-radius:999px; background:rgba(255,255,255,.5);
+    filter:blur(2px); pointer-events:none;
+  }
+  #play{ position:absolute; inset:0; z-index:2; }
+  #fxLayer{ position:absolute; inset:0; pointer-events:none; z-index:30; overflow:hidden; }
+
+  /* ============ 悬浮 UI：只剩两个半透明圆钮 ============ */
+  .float-ui{ position:absolute; z-index:20; }
+  .float-btn{
+    width:48px; height:48px; border-radius:50%;
+    background:rgba(255,253,247,.55); border:2px solid rgba(255,255,255,.75);
+    font-size:22px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 10px rgba(120,84,40,.14); backdrop-filter:blur(3px);
+  }
+  #btnRestart{ top:calc(10px + env(safe-area-inset-top)); left:12px; }
+  #btnSettings{ top:calc(10px + env(safe-area-inset-top)); right:12px; }
+
+  /* 主题横幅：浮现后自动淡出 */
+  #banner{
+    position:absolute; top:calc(74px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%) translateY(-6px);
+    z-index:21; pointer-events:none; white-space:nowrap;
+    background:rgba(255,253,247,.78); border:2px solid rgba(255,255,255,.85);
+    border-radius:999px; padding:9px 22px; font-size:18px; font-weight:800;
+    box-shadow:var(--shadow); opacity:0; transition:opacity .8s ease, transform .8s ease;
+  }
+  #banner.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* 偶发文字夸奖：浮现后自动淡出，不挡点按 */
+  #praise{
+    position:absolute; top:26%; left:0; right:0; z-index:26; pointer-events:none;
+    text-align:center; font-size:min(13vw,54px); font-weight:900; color:var(--accent);
+    text-shadow:0 3px 0 #fff, 0 8px 22px rgba(242,166,90,.4); opacity:0; padding:0 20px;
+  }
+  #praise.show{ animation:praiseIn 2.6s ease forwards; }
+  @keyframes praiseIn{ 0%{opacity:0; transform:scale(.6) rotate(-3deg)} 16%{opacity:1; transform:scale(1.08) rotate(1deg)} 26%{transform:scale(1)} 78%{opacity:1} 100%{opacity:0; transform:scale(1.02)} }
+
+  /* ============ 泡泡 ============ */
+  .bubble{
+    position:absolute; left:0; top:0; border-radius:50%; cursor:pointer; z-index:5;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%),
+      radial-gradient(circle at 50% 50%, rgba(190,225,250,.30), rgba(160,205,245,.42));
+    border:2px solid rgba(255,255,255,.85);
+    box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(150,195,240,.28), 0 6px 16px rgba(110,160,210,.18);
+    will-change:transform;
+  }
+  .bubble::after{
+    content:""; position:absolute; top:11%; left:16%; width:26%; height:16%;
+    border-radius:50%; background:rgba(255,255,255,.85); transform:rotate(-24deg); filter:blur(1px); pointer-events:none;
+  }
+  .bubble .jelly{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .bubble .glyph{ line-height:1; pointer-events:none; filter:drop-shadow(0 2px 3px rgba(90,70,40,.15)); }
+  /* 六色柔和彩色玻璃 tint */
+  .bubble.c-pink{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(248,196,214,.45), rgba(243,156,182,.52)); border-color:rgba(255,225,235,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(240,150,180,.30), 0 6px 16px rgba(235,150,180,.22); }
+  .bubble.c-blue{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(178,220,248,.45), rgba(140,195,240,.52)); border-color:rgba(220,240,255,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(140,190,240,.30), 0 6px 16px rgba(130,185,240,.22); }
+  .bubble.c-green{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(196,236,205,.45), rgba(150,210,165,.52)); border-color:rgba(225,248,230,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(140,205,160,.30), 0 6px 16px rgba(140,205,155,.22); }
+  .bubble.c-yellow{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(252,232,160,.48), rgba(246,205,95,.52)); border-color:rgba(255,244,200,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(240,200,95,.30), 0 6px 16px rgba(240,200,95,.24); }
+  .bubble.c-purple{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(224,210,244,.48), rgba(192,165,228,.52)); border-color:rgba(240,232,255,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(185,160,225,.30), 0 6px 16px rgba(180,155,225,.24); }
+  .bubble.c-orange{ background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 34%, rgba(255,255,255,.08) 55%), radial-gradient(circle at 50% 50%, rgba(255,220,175,.48), rgba(250,180,105,.54)); border-color:rgba(255,238,215,.95); box-shadow: inset 0 0 18px rgba(255,255,255,.55), inset -6px -8px 16px rgba(245,175,100,.32), 0 6px 16px rgba(245,175,100,.24); }
+  .fx-ribbon{ position:absolute; border-radius:999px; will-change:transform,opacity; pointer-events:none; }
+  .fx-dot{ position:absolute; border-radius:50%; will-change:transform,opacity; pointer-events:none; }
+  .bubble.popping{ transition:transform .38s ease, opacity .38s ease; opacity:0; }
+  /* 金色惊喜泡泡 */
+  .bubble.gold{
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,.98) 0%, rgba(255,240,190,.5) 34%, rgba(255,215,110,.18) 55%),
+      radial-gradient(circle at 50% 50%, rgba(255,226,140,.5), rgba(250,195,70,.55));
+    border-color:rgba(255,236,170,.95);
+    box-shadow: inset 0 0 20px rgba(255,244,200,.8), inset -6px -8px 16px rgba(240,190,80,.35), 0 6px 22px rgba(245,190,70,.5);
+  }
+  /* 彩虹惊喜泡泡 */
+  .bubble.rainbow{
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.3) 32%, rgba(255,255,255,.06) 52%),
+      conic-gradient(from 210deg, rgba(246,198,211,.5), rgba(249,226,156,.5), rgba(196,230,205,.5), rgba(191,224,242,.5), rgba(221,208,238,.5), rgba(246,198,211,.5));
+    box-shadow: inset 0 0 18px rgba(255,255,255,.6), 0 6px 22px rgba(190,170,230,.45);
+  }
+  /* 泡泡雨的小空泡泡 */
+  .bubble.rain{ z-index:4; opacity:.92; }
+
+  /* 点破涟漪 */
+  .ripple{
+    position:absolute; border-radius:50%; pointer-events:none; z-index:6;
+    border:3px solid rgba(255,255,255,.9);
+    box-shadow:0 0 0 3px rgba(242,200,120,.35), inset 0 0 12px rgba(255,255,255,.6);
+    animation:rippleOut 1.4s ease-out forwards;
+  }
+  @keyframes rippleOut{ 0%{ transform:scale(.35); opacity:.95; } 100%{ transform:scale(1.9); opacity:0; } }
+
+  /* 点破后跳舞飘走的图案 */
+  .dancer{ position:absolute; z-index:18; pointer-events:none; line-height:1; will-change:transform,opacity;
+    filter:drop-shadow(0 3px 5px rgba(90,70,40,.2)); }
+  .mini-star{ position:absolute; z-index:18; pointer-events:none; line-height:1; will-change:transform,opacity; }
+
+  /* ============ 特效粒子（全部慢速柔和） ============ */
+  .confetti{ position:absolute; border-radius:3px; will-change:transform,opacity; }
+  .fx-star{ position:absolute; will-change:transform,opacity; line-height:1; }
+  .fx-bub{ position:absolute; border-radius:50%; will-change:transform,opacity; pointer-events:none;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.95), rgba(255,255,255,.25) 45%, rgba(170,210,245,.4));
+    border:1.5px solid rgba(255,255,255,.85); }
+  #rainbowSvg{ position:absolute; left:50%; bottom:8%; transform:translateX(-50%); width:min(92vw,560px); height:auto; }
+
+  /* ============ 设置面板（一屏放完不滚动） ============ */
+  .overlay{
+    position:absolute; inset:0; z-index:50; display:none; flex-direction:column;
+    padding:calc(6px + env(safe-area-inset-top)) 16px calc(8px + env(safe-area-inset-bottom));
+    transition:background 1.2s ease, opacity .25s ease;
+  }
+  .overlay.faded{ opacity:0; pointer-events:none; }
+  .overlay.open{ display:flex; }
+  .overlay h2{ margin:0 0 6px; font-size:21px; text-align:center; flex:none; }
+  .set-row{ display:flex; align-items:center; gap:10px; margin-bottom:6px; flex:none; }
+  .set-row .lab{ font-size:15.5px; font-weight:800; color:var(--ink-soft); width:74px; flex:none; }
+  .seg{ flex:1; display:flex; gap:5px; background:rgba(255,253,247,.9); border:2px solid var(--line); border-radius:999px; padding:3px; }
+  .seg button{ flex:1; border-radius:999px; font-weight:700; font-size:15.5px; color:var(--ink-soft); min-height:36px; padding:2px 0; }
+  .seg button.on{ background:var(--accent); color:#fff; }
+  .summary-row{
+    flex:1; display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:var(--card); border:2px solid var(--line); border-radius:16px; padding:4px 14px;
+    font-size:16px; font-weight:700; box-shadow:var(--shadow); min-height:46px; text-align:left;
+  }
+  .summary-row .sw{ width:26px; height:26px; border-radius:50%; flex:none; border:2px solid rgba(255,255,255,.9); box-shadow:0 1px 4px rgba(120,84,40,.25); }
+  .summary-row .chev{ color:var(--ink-soft); font-weight:900; }
+  .done-btn{
+    margin-top:auto; flex:none; background:var(--accent); color:#fff; font-size:19px; font-weight:800;
+    border-radius:999px; padding:8px; box-shadow:0 4px 14px rgba(242,166,90,.45); min-height:48px; width:100%;
+  }
+  .picker-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; overflow-y:auto; min-height:0; padding-bottom:8px; -webkit-overflow-scrolling:touch; }
+  .picker-grid button{
+    background:var(--card); border:2px solid var(--line); border-radius:16px; font-size:15.5px; font-weight:700;
+    padding:7px 8px; box-shadow:var(--shadow); min-height:48px; display:flex; align-items:center; gap:8px; text-align:left;
+  }
+  .picker-grid button.on{ border-color:var(--accent); background:var(--accent-soft); }
+  .picker-grid .pg-glyph{ font-size:22px; flex:none; }
+  .picker-grid .pg-sw{ width:30px; height:30px; border-radius:50%; flex:none; border:2px solid rgba(255,255,255,.9); box-shadow:0 1px 4px rgba(120,84,40,.25); }
+  .back-btn{
+    flex:none; align-self:flex-start; display:flex; align-items:center; gap:4px;
+    background:rgba(255,253,247,.85); border:2px solid var(--line); border-radius:999px;
+    font-size:16px; font-weight:800; padding:4px 18px 4px 12px; box-shadow:var(--shadow); min-height:40px; margin-bottom:6px;
+  }
+  /* 设置紧凑排版：特效逐项开关两列 chip */
+  #settingsPanel .seg button{ min-height:35px; }
+  .fx-chips{ flex:1; display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+  .fx-chip{ display:flex; align-items:center; justify-content:space-between; gap:6px; background:rgba(255,253,247,.9); border:2px solid var(--line); border-radius:999px; padding:2px 10px; min-height:31px; font-size:14px; font-weight:700; color:var(--ink-soft); }
+  .fx-chip.on{ border-color:var(--accent); background:var(--accent-soft); color:var(--ink); }
+  .fx-chip .dot{ width:10px; height:10px; border-radius:50%; background:#d8cbb6; flex:none; }
+  .fx-chip.on .dot{ background:var(--accent); }
+  .fx-toggles-row{ align-items:flex-start; }
+  .fx-toggles-row .lab{ padding-top:7px; }
+  /* 布尔开关两列紧凑 chip 网格（主设置页） */
+  .bool-grid{ display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:4px; flex:none; }
+  .bool-grid .fx-chip{ width:100%; }
+  /* 设置 Tab 式（照记忆翻牌）：顶部常驻 Tab 栏 + 返回常驻，每 Tab 一屏不滚动 */
+  .tab-bar{ display:flex; gap:5px; background:rgba(255,253,247,.9); border:2px solid var(--line); border-radius:999px; padding:3px; flex:none; margin-bottom:7px; }
+  .tab-bar button{ flex:1; border-radius:999px; font-weight:800; font-size:16px; color:var(--ink-soft); min-height:36px; padding:2px 0; }
+  .tab-bar button.on{ background:var(--accent); color:#fff; }
+  .tab-pane{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .tab-pane[hidden]{ display:none; }
+  /* 特效 Tab：19 个独立开关三列紧凑 chips */
+  #tab-fx .fx-chips{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; align-content:start; flex:none; }
+  #tab-fx .fx-chip{ min-height:31px; font-size:13px; padding:2px 7px; gap:4px; }
+  /* 泡泡拖尾：身后淡淡轨迹，快速淡出 */
+  .trail{ position:absolute; border-radius:50%; pointer-events:none; z-index:4; will-change:transform,opacity; }
+  /* 慌张小汗滴 / 感叹号粒子 */
+  .fx-sweat{ position:absolute; will-change:transform,opacity; line-height:1; pointer-events:none; font-weight:900; }
+  /* 生命特效层：呼吸/形变/闪光/色彩流转（只作用内层，不影响位置与命中） */
+  .bubble .life{ position:absolute; inset:0; pointer-events:none; }
+  .bubble .sheen{ position:absolute; inset:0; border-radius:50%; pointer-events:none; opacity:0; }
+  .bubble .shine{ position:absolute; left:16%; top:12%; width:36%; height:26%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,0)); filter:blur(1px); }
+  .bubble .twinkle{ position:absolute; pointer-events:none; line-height:1; color:#fff; opacity:0;
+    text-shadow:0 0 7px rgba(255,255,255,.95), 0 0 3px rgba(255,255,255,.8); }
+  /* 空白处按下涟漪 */
+  .touch-ripple{ position:absolute; border-radius:50%; pointer-events:none; z-index:3;
+    border:3px solid rgba(255,255,255,.8); box-shadow:0 0 20px rgba(255,255,255,.55), inset 0 0 16px rgba(255,255,255,.5);
+    animation:touchRipple 1.05s ease-out forwards; }
+  @keyframes touchRipple{ 0%{ transform:scale(.3); opacity:.95; } 100%{ transform:scale(1); opacity:0; } }
+  #play{ touch-action:none; }
+  #tab-sound .fx-chip{ min-height:46px; font-size:16.5px; padding:2px 16px; }
+  /* ============ 滑条一行式：左标题 / 中滑条 / 右数值，连续可调（不吸附档位） ============ */
+  .srow{ display:grid; grid-template-columns:62px 1fr 54px; align-items:center; gap:8px; min-height:32px; flex:none; }
+  .srow .lab{ font-size:14.5px; font-weight:800; color:var(--ink-soft); line-height:1.15; }
+  .srow .snote{ display:block; font-size:9.5px; font-weight:600; color:var(--ink-soft); opacity:.78; margin-top:1px; }
+  .srow .sval{ font-size:15px; font-weight:800; color:var(--accent); text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .srow input[type=range]{ width:100%; height:26px; margin:0; padding:0; background:transparent; -webkit-appearance:none; appearance:none; display:block; }
+  .srow input[type=range]::-webkit-slider-runnable-track{ height:6px; border-radius:3px; background:#f7e3c2; }
+  .srow input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:#fff; border:3px solid var(--accent); margin-top:-9px; box-shadow:0 2px 6px rgba(120,84,40,.28); cursor:pointer; }
+  .srow input[type=range]::-moz-range-track{ height:6px; border-radius:3px; background:#f7e3c2; }
+  .srow input[type=range]::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#fff; border:3px solid var(--accent); box-shadow:0 2px 6px rgba(120,84,40,.28); cursor:pointer; }
+  /* 泡泡 Tab 开关分组小标题 + 三列紧凑 chips */
+  .chip-group-title{ font-size:12.5px; font-weight:800; color:var(--ink-soft); margin:4px 0 2px; flex:none; }
+  .chip-group-title:first-child{ margin-top:0; }
+  .chips3{ grid-template-columns:1fr 1fr 1fr; }
+  .chips3 .fx-chip{ min-height:25px; font-size:12.5px; padding:2px 6px; gap:3px; }
+  /* 动态效果可展开区：默认收起，摘要行显示已开 n/15；展开只在 Tab 内占位 */
+  .dyn-toggle{ display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; flex:none;
+    background:rgba(255,253,247,.9); border:2px solid var(--line); border-radius:999px;
+    padding:2px 12px; min-height:32px; margin:4px 0 2px; font-size:13.5px; font-weight:800; color:var(--ink-soft); }
+  .dyn-toggle .chev{ font-weight:900; transition:transform .2s ease; }
+  .dyn-toggle.open .chev{ transform:rotate(90deg); }
+  #bubbleChips{ margin-top:2px; }
+  #bubbleChips[hidden]{ display:none; }
+  .bool-grid.chips3{ margin-bottom:2px; }
+  /* chip 名称区 = 预览触发（点名称只看演示、不改开关） */
+  .pv-name{ cursor:pointer; }
+  /* ============ 特效演示舞台：独立于设置 DOM、全屏透明、z-index 高于一切 ============ */
+  #previewStage{ position:absolute; inset:0; z-index:90; display:none; }
+  #previewStage.on{ display:block; }
+  #pvLabel{
+    position:absolute; top:calc(64px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    z-index:97; pointer-events:none; white-space:nowrap; display:none;
+    background:rgba(255,253,247,.88); border:2px solid rgba(255,255,255,.9);
+    border-radius:999px; padding:7px 20px; font-size:17px; font-weight:800; color:var(--ink);
+    box-shadow:var(--shadow); text-align:center;
+  }
+  #pvLabel.on{ display:block; }
+  #pvLabel .pv-hint{ display:block; font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-top:1px; }
+  #pvBubbleWrap{ position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); }
+  /* ============ 新增泡泡动态效果元素（只用 transform/opacity） ============ */
+  .mid,.pulse{ position:absolute; inset:0; pointer-events:none; }
+  .dyn-ripple{ position:absolute; inset:9%; border-radius:50%; border:2.5px solid rgba(255,255,255,.75); opacity:0; pointer-events:none; }
+  .halo{ position:absolute; inset:-13%; border-radius:50%; pointer-events:none; }
+  .gshadow{ position:absolute; left:6%; right:6%; top:85%; height:20%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(96,118,150,.30), rgba(96,118,150,0) 68%); }
+  .orbit{ position:absolute; inset:-7%; pointer-events:none; }
+  .orbit .ostar{ position:absolute; left:50%; top:0; transform:translate(-50%,-50%); line-height:1; filter:drop-shadow(0 0 4px rgba(255,255,255,.9)); }
+  .redge{ position:absolute; inset:0; border-radius:50%; pointer-events:none; opacity:.75;
+    background:conic-gradient(from 0deg, rgba(242,160,160,.9), rgba(247,201,138,.9), rgba(249,226,156,.9), rgba(168,216,160,.9), rgba(158,207,236,.9), rgba(195,174,224,.9), rgba(242,160,160,.9));
+    -webkit-mask:radial-gradient(farthest-side, rgba(0,0,0,0) calc(100% - 6px), #000 calc(100% - 5px));
+    mask:radial-gradient(farthest-side, rgba(0,0,0,0) calc(100% - 6px), #000 calc(100% - 5px)); }
+  .blowb{ position:absolute; left:74%; top:20%; border-radius:50%; opacity:0; pointer-events:none;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.95), rgba(255,255,255,.25) 45%, rgba(170,210,245,.4));
+    border:1.5px solid rgba(255,255,255,.85); }
+  /* 害羞泡泡的淡粉腮红 */
+  .blush{ position:absolute; top:53%; width:21%; height:12%; border-radius:50%; pointer-events:none;
+    background:radial-gradient(closest-side, rgba(244,150,175,.8), rgba(244,150,175,0)); filter:blur(1px); }
+  .blush.l{ left:13%; } .blush.r{ right:13%; }
+  /* 微风事件的极淡风纹线 */
+  .wind-line{ position:absolute; height:3px; border-radius:3px; pointer-events:none;
+    background:linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.85), rgba(255,255,255,0)); }
+  @media (max-height:700px){
+    .set-row{ margin-bottom:5px; }
+    .seg button{ min-height:33px; font-size:14.5px; }
+    #settingsPanel .seg button{ min-height:30px; font-size:14px; }
+    .summary-row{ min-height:38px; }
+    .overlay h2{ font-size:20px; margin-bottom:5px; }
+    #settingsPanel .back-btn{ min-height:36px; margin-bottom:5px; padding-top:3px; padding-bottom:3px; }
+    #settingsPanel .fx-chip{ min-height:27px; font-size:13.5px; }
+    #settingsPanel .done-btn{ min-height:44px; padding:7px; font-size:17px; }
+    .tab-bar{ margin-bottom:6px; }
+    .tab-bar button{ min-height:34px; font-size:15px; }
+    #tab-fx .fx-chip{ min-height:29px; font-size:12.5px; }
+    #tab-sound .fx-chip{ min-height:44px; }
+    .srow{ min-height:32px; gap:6px; }
+    .srow .lab{ font-size:13.5px; }
+    .srow .sval{ font-size:14px; }
+    .srow input[type=range]{ height:26px; }
+    .chip-group-title{ font-size:11.5px; margin:3px 0 2px; }
+    .chips3{ gap:4px; }
+    .chips3 .fx-chip{ min-height:24px; font-size:12px; }
+    .dyn-toggle{ min-height:28px; font-size:12.5px; margin:3px 0 1px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #praise.show{ animation-duration:.6s; }
+    .ripple{ animation-duration:.5s; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="scene"></div>
+  <div id="play"></div>
+
+  <button class="float-ui float-btn" id="btnRestart" aria-label="restart">↺</button>
+  <button class="float-ui float-btn" id="btnSettings" aria-label="settings">⚙️</button>
+
+  <div id="banner"></div>
+  <div id="praise"></div>
+  <div id="fxLayer"></div>
+
+  <!-- 设置：Tab 式（照记忆翻牌）——顶部常驻 Tab 栏 + 返回常驻，每 Tab 一屏不滚动 -->
+  <div class="overlay" id="settingsPanel" role="dialog" aria-modal="true">
+    <button class="back-btn" id="settingsBack">‹ <span data-i18n="back">返回</span></button>
+    <h2 data-i18n="settings">设置</h2>
+    <div class="tab-bar" id="setTabs">
+      <button data-tab="bubbles" class="on" data-i18n="tabBubbles">泡泡</button>
+      <button data-tab="fx" data-i18n="tabFx">特效</button>
+      <button data-tab="visual" data-i18n="tabVisual">画面</button>
+      <button data-tab="sound" data-i18n="tabSound">声音</button>
+    </div>
+
+    <!-- 泡泡 Tab：四项一行式连续滑条（左标题/中滑条/右数值）+ 泡泡雨分段 + 开关分两组（玩法 6 / 动态效果 15，三列紧凑） -->
+    <div class="tab-pane" id="tab-bubbles">
+      <div class="srow">
+        <span class="lab" data-i18n="speed">速度</span>
+        <input type="range" id="speedSlider" min="0.3" max="3" step="0.05" value="1" aria-label="speed">
+        <span class="sval" id="speedVal"></span>
+      </div>
+      <div class="srow">
+        <span class="lab" data-i18n="density">泡泡量</span>
+        <input type="range" id="countSlider" min="0.4" max="1.6" step="0.05" value="1" aria-label="bubble count">
+        <span class="sval" id="countVal"></span>
+      </div>
+      <div class="srow">
+        <span class="lab"><span data-i18n="refill">补给速度</span><span class="snote" data-i18n="refillNote">越小补得越快</span></span>
+        <input type="range" id="refillSlider" min="0.4" max="2" step="0.05" value="1" aria-label="refill speed">
+        <span class="sval" id="refillVal"></span>
+      </div>
+      <div class="srow">
+        <span class="lab" data-i18n="size">泡泡大小</span>
+        <input type="range" id="sizeSlider" min="0.7" max="1.8" step="0.05" value="1" aria-label="bubble size">
+        <span class="sval" id="sizeVal"></span>
+      </div>
+      <div class="set-row"><div class="lab" data-i18n="rainFreq">泡泡雨</div><div class="seg" id="rainSeg">
+        <button data-v="off" data-i18n="rainOff">关</button>
+        <button data-v="sometimes" data-i18n="rainSometimes">偶尔</button>
+        <button data-v="often" data-i18n="rainOften">经常</button>
+      </div></div>
+      <div class="chip-group-title" data-i18n="playGroup">玩法</div>
+      <div class="bool-grid chips3">
+        <button class="fx-chip bool-chip" data-k="collide"><span data-i18n="collide">泡泡碰撞</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="colorful"><span data-i18n="colorful">彩色泡泡</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="speedWobble"><span data-i18n="speedWobble">速度变化</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="panic"><span data-i18n="panic">慌张反应</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="breeze"><span data-i18n="breeze">微风事件</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="shy"><span data-i18n="shy">害羞泡泡</span><span class="dot"></span></button>
+      </div>
+      <button class="dyn-toggle" id="dynToggle" aria-expanded="false"><span id="dynToggleText">动态效果 · 已开 15/15</span><span class="chev">›</span></button>
+      <div class="bool-grid chips3" id="bubbleChips" hidden>
+        <button class="fx-chip bool-chip" data-k="breathe"><span data-i18n="breathe">呼吸膨胀</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="deform"><span data-i18n="deform">泡泡形变</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="sparkle"><span data-i18n="sparkleFx">闪闪发光</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="hueFlow"><span data-i18n="hueFlow">色彩流转</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="trail"><span data-i18n="trail">泡泡拖尾</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="slowSpin"><span data-i18n="slowSpin">慢旋转</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="squash"><span data-i18n="squash">碰撞挤压</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="surfRipple"><span data-i18n="surfRipple">表面波纹</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="heartbeat"><span data-i18n="heartbeat">泡泡心跳</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="yawn"><span data-i18n="yawn">打哈欠</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="halo"><span data-i18n="halo">柔光光晕</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="gshadow"><span data-i18n="gshadow">地面影子</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="orbit"><span data-i18n="orbit">轨道小星</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="rainbowEdge"><span data-i18n="rainbowEdge">彩虹泡边</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="blow"><span data-i18n="blow">吹小泡泡</span><span class="dot"></span></button>
+      </div>
+    </div>
+
+    <!-- 特效 Tab：特效量 + 27 个点破特效独立开关（三列） + 同色连锁开关 -->
+    <div class="tab-pane" id="tab-fx" hidden>
+      <div class="set-row"><div class="lab" data-i18n="fxAmt">特效量</div><div class="seg" id="fxSeg">
+        <button data-v="rich" data-i18n="fxRich">丰富</button>
+        <button data-v="simple" data-i18n="fxSimple">简约</button>
+        <button data-v="off" data-i18n="fxOff">关</button>
+      </div></div>
+      <div class="fx-chips" id="fxChips">
+        <button class="fx-chip on" data-fx="confetti"><span data-i18n="fxConfetti">撒花</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="stars"><span data-i18n="fxStars">星星</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="hearts"><span data-i18n="fxHearts">爱心</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="petals"><span data-i18n="fxPetals">花瓣</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="ribbons"><span data-i18n="fxRibbons">彩带</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="glow"><span data-i18n="fxGlow">柔光涟漪</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="surprise"><span data-i18n="fxSurprise">惊喜泡泡</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="notes"><span data-i18n="fxNotes">音符</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="fireworks"><span data-i18n="fxFireworks">小烟花</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="butterfly"><span data-i18n="fxButterfly">蝴蝶</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="snow"><span data-i18n="fxSnow">雪花</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="feather"><span data-i18n="fxFeather">羽毛</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="candy"><span data-i18n="fxCandy">糖果</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="bloom"><span data-i18n="fxBloom">花朵绽放</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="minibub"><span data-i18n="fxMinibub">迷你泡泡圈</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="rainbowArc"><span data-i18n="fxRainbowArc">小彩虹弧</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="splash"><span data-i18n="fxSplash">水花四溅</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="glitter"><span data-i18n="fxGlitter">金色闪粉</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="balloon"><span data-i18n="fxBalloon">小气球</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="stardust"><span data-i18n="fxStardust">螺旋星尘</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="raindrops"><span data-i18n="fxRaindrops">彩虹雨滴</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="moonstars"><span data-i18n="fxMoonstars">月亮星星</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="plane"><span data-i18n="fxPlane">纸飞机</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="pinwheel"><span data-i18n="fxPinwheel">风车旋转</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="wreath"><span data-i18n="fxWreath">花朵花环</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="smoke"><span data-i18n="fxSmoke">彩色烟雾</span><span class="dot"></span></button>
+        <button class="fx-chip on" data-fx="drizzle"><span data-i18n="fxDrizzle">云朵细雨</span><span class="dot"></span></button>
+      </div>
+      <div class="bool-grid" style="margin-top:6px;">
+        <button class="fx-chip bool-chip" data-k="chain" style="grid-column:1 / -1;"><span data-i18n="chain">同色连锁</span><span class="dot"></span></button>
+      </div>
+    </div>
+
+    <!-- 画面 Tab：主题 / 背景摘要行（点开全屏选择器） -->
+    <div class="tab-pane" id="tab-visual" hidden>
+      <div class="set-row"><div class="lab" data-i18n="theme">图案主题</div>
+        <button class="summary-row" id="themeSummary"><span id="themeSummaryText"></span><span class="chev">›</span></button>
+      </div>
+      <div class="set-row"><div class="lab" data-i18n="bg">背景</div>
+        <button class="summary-row" id="bgSummary"><span style="display:flex;align-items:center;gap:9px"><span class="sw" id="bgSummarySw"></span><span id="bgSummaryText"></span></span><span class="chev">›</span></button>
+      </div>
+    </div>
+
+    <!-- 声音 Tab：四个开关 + 语言 -->
+    <div class="tab-pane" id="tab-sound" hidden>
+      <div class="bool-grid" id="soundChips">
+        <button class="fx-chip bool-chip" data-k="sound"><span data-i18n="sound">音效</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="music"><span data-i18n="music">轻音乐</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="vibrate"><span data-i18n="vibrate">震动</span><span class="dot"></span></button>
+        <button class="fx-chip bool-chip" data-k="praise"><span data-i18n="praiseT">夸奖</span><span class="dot"></span></button>
+      </div>
+      <div class="set-row"><div class="lab" data-i18n="language">语言</div><div class="seg" id="langSeg">
+        <button data-v="zh">中文</button>
+        <button data-v="en">English</button>
+      </div></div>
+    </div>
+
+    <button class="done-btn" id="settingsDone" data-i18n="done">好了，去玩吧</button>
+  </div>
+
+  <!-- 主题选择器 -->
+  <div class="overlay" id="themePicker" role="dialog" aria-modal="true">
+    <button class="back-btn" id="themeBack">‹ <span data-i18n="back">返回</span></button>
+    <h2 data-i18n="theme">图案主题</h2>
+    <div class="picker-grid" id="themeGrid"></div>
+  </div>
+
+  <!-- 背景选择器 -->
+  <div class="overlay" id="bgPicker" role="dialog" aria-modal="true">
+    <button class="back-btn" id="bgBack">‹ <span data-i18n="back">返回</span></button>
+    <h2 data-i18n="bg">背景</h2>
+    <div class="picker-grid" id="bgGrid"></div>
+  </div>
+
+  <!-- 特效演示舞台：独立于设置 DOM，全屏透明，演示时设置层淡出、舞台置顶 -->
+  <div id="previewStage"><div id="pvBubbleWrap"></div></div>
+  <div id="pvLabel"><span id="pvName"></span><span class="pv-hint" data-i18n="previewHint">点一下任意处结束演示</span></div>
+
+</div>
+
+<script>
+"use strict";
+/* ================= 图案池：与「记忆翻牌配对」同一套 26 主题 / 1,233 图案，原样取用 ================= */
+function P(s){ return s.split(";").map(function(tok){ var p = tok.split("|"); return { glyph:p[0], zh:p[1], en:p[2] }; }); }
+  var THEME_META = [
+    ["animals","🦁","动物园","Zoo"],["ocean","🐳","海洋","Ocean"],["food","🍔","美食","Food"],["fruitveg","🍎","水果蔬菜","Fruits & Veggies"],
+    ["dessert","🍰","甜点饮品","Desserts & Drinks"],["space","🚀","太空","Space"],["sports","⚽","运动","Sports"],["vehicles","🚗","交通","Vehicles"],
+    ["garden","🌸","花园植物","Garden"],["music","🎸","音乐","Music"],["toys","🧸","玩具游戏","Toys & Games"],["bugsbirds","🦋","昆虫鸟类","Bugs & Birds"],
+    ["weather","🌈","天气自然","Weather & Nature"],["pets","🐶","宠物","Pets"],["festival","🎄","节日庆典","Festivals"],["jobs","👩‍🚀","职业人物","Jobs"],
+    ["shapes","🔷","颜色形状","Colors & Shapes"],["numbers","🔢","数字","Numbers"],["letters","🔤","英文字母","Letters"],["emotions","😀","表情情绪","Feelings"],["body","👀","身体部位","Body Parts"],["clothes","👕","衣服穿戴","Clothes"],["home","🏠","日常用品","Everyday Things"],["farm","🚜","农场","Farm"],["seasons","🍂","四季","Seasons"],["school","🎒","学校用品","School Things"]
+  ];
+  var THEMES = {
+    animals: P("🦁|狮子|Lion;🐯|老虎|Tiger;🐼|熊猫|Panda;🐘|大象|Elephant;🦒|长颈鹿|Giraffe;🦓|斑马|Zebra;🦛|河马|Hippo;🦏|犀牛|Rhino;🦘|袋鼠|Kangaroo;🐨|考拉|Koala;🐻|棕熊|Bear;🦊|狐狸|Fox;🐺|狼|Wolf;🐰|兔子|Rabbit;🐿️|松鼠|Squirrel;🦔|刺猬|Hedgehog;🦌|鹿|Deer;🐪|骆驼|Camel;🦙|羊驼|Llama;🐐|山羊|Goat;🐑|绵羊|Sheep;🐷|小猪|Pig;🐮|奶牛|Cow;🐴|马|Horse;🐱|猫咪|Cat;🐶|小狗|Dog;🐵|猴子|Monkey;🦍|大猩猩|Gorilla;🦥|树懒|Sloth;🦨|臭鼬|Skunk;🦝|浣熊|Raccoon;🦦|水獭|Otter;🐏|公羊|Ram;🦇|蝙蝠|Bat;🐭|老鼠|Mouse;🐹|仓鼠|Hamster;🐗|野猪|Boar;🐂|公牛|Ox;🐆|豹子|Leopard;🐅|老虎|Tiger;🐊|鳄鱼|Crocodile;🐢|海龟|Turtle;🦎|蜥蜴|Lizard;🐍|蛇|Snake;🐸|青蛙|Frog;🦖|霸王龙|T-Rex;🦕|长颈龙|Sauropod;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster"),
+    ocean: P("🐳|鲸鱼|Whale;🐋|蓝鲸|Blue Whale;🐬|海豚|Dolphin;🏊|游泳|Swimming;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster;🦐|小虾|Shrimp;🐠|热带鱼|Tropical Fish;🐟|小鱼|Fish;🐡|河豚|Pufferfish;🦈|鲨鱼|Shark;🐢|海龟|Sea Turtle;🚤|快艇|Speedboat;🐚|贝壳|Shell;🌴|棕榈树|Palm Tree;🏄|冲浪|Surfing;🦦|海獭|Sea Otter;🧭|指南针|Compass;🚣|划船|Rowing;🐌|海螺|Sea Snail;🦂|蝎子|Scorpion;🐊|鳄鱼|Crocodile;🦩|火烈鸟|Flamingo;🐧|企鹅|Penguin;🦢|天鹅|Swan;🦆|鸭子|Duck;🐸|青蛙|Frog;🛶|独木舟|Canoe;⛵|帆船|Sailboat;🚢|轮船|Ship;⚓|船锚|Anchor;⛱️|沙滩伞|Beach Umbrella;🏝️|小岛|Island;🌊|海浪|Wave;💧|水滴|Droplet;💦|水花|Splash;🧜|美人鱼|Mermaid;🔱|三叉戟|Trident;🗺️|藏宝图|Treasure Map;💎|宝石|Gem;🚩|红旗|Red Flag;🎏|鲤鱼旗|Carp Streamer;🤿|潜水面镜|Diving Mask;🎣|钓鱼竿|Fishing Pole;🌺|扶桑花|Hibiscus;🌅|海上日出|Ocean Sunrise;🏖️|沙滩|Beach;🕊️|鸽子|Dove;⛴️|渡轮|Ferry;🧊|浮冰|Ice Floe;🤽|水球|Water Polo"),
+    food: P("🍔|汉堡|Burger;🍕|披萨|Pizza;🌭|热狗|Hot Dog;🌮|塔可|Taco;🌯|卷饼|Burrito;🥪|三明治|Sandwich;🍟|薯条|Fries;🍗|炸鸡|Fried Chicken;🍖|烤肉|Meat;🥓|培根|Bacon;🍳|煎蛋|Fried Egg;🥞|松饼|Pancakes;🧇|华夫饼|Waffle;🍞|面包|Bread;🥐|可颂|Croissant;🥖|法棍|Baguette;🥨|椒盐卷饼|Pretzel;🧀|奶酪|Cheese;🥗|沙拉|Salad;🍲|火锅|Hot Pot;🍜|拉面|Ramen;🍝|意面|Pasta;🍣|寿司|Sushi;🍱|便当|Bento;🍙|饭团|Onigiri;🍚|米饭|Rice;🍛|咖喱饭|Curry Rice;🥟|饺子|Dumpling;🍤|炸虾|Fried Shrimp;🍢|关东煮|Oden;🍡|团子|Dango;🥠|幸运饼干|Fortune Cookie;🥮|月饼|Mooncake;🍿|爆米花|Popcorn;🌽|玉米|Corn;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍠|红薯|Sweet Potato;🥔|土豆|Potato;🥕|胡萝卜|Carrot;🥒|黄瓜|Cucumber;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🧄|大蒜|Garlic;🧅|洋葱|Onion;🍄|蘑菇|Mushroom;🥩|牛排|Steak;🍘|米饼|Rice Cracker;🦴|骨头|Bone"),
+    fruitveg: P("🍎|苹果|Apple;🍐|梨|Pear;🍊|橙子|Orange;🍋|柠檬|Lemon;🍌|香蕉|Banana;🍉|西瓜|Watermelon;🍇|葡萄|Grapes;🍓|草莓|Strawberry;🍈|甜瓜|Melon;🍒|樱桃|Cherries;🍑|桃子|Peach;🥭|芒果|Mango;🍍|菠萝|Pineapple;🥥|椰子|Coconut;🥝|猕猴桃|Kiwi;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥑|牛油果|Avocado;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🥒|黄瓜|Cucumber;🌶️|辣椒|Chili;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🧄|大蒜|Garlic;🧅|洋葱|Onion;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🥞|松饼|Pancakes;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;🎃|南瓜|Pumpkin;🥚|鸡蛋|Egg;🍏|青苹果|Green Apple;🧈|黄油|Butter;🧆|蔬菜丸子|Veggie Balls;🧀|奶酪|Cheese;🥫|番茄罐头|Canned Tomatoes;🌻|向日葵|Sunflower;🌾|稻穗|Sheaf of Rice;🥗|蔬菜沙拉|Veggie Salad;🍯|蜂蜜|Honey;🧃|果汁|Juice;🥛|牛奶|Milk;🥯|贝果|Bagel;🥙|蔬菜卷饼|Stuffed Wrap;🍲|蔬菜汤|Veggie Soup"),
+    dessert: P("🍰|蛋糕|Cake;🎂|生日蛋糕|Birthday Cake;🧁|纸杯蛋糕|Cupcake;🍩|甜甜圈|Donut;🍪|饼干|Cookie;🍫|巧克力|Chocolate;🍬|糖果|Candy;🍭|棒棒糖|Lollipop;🍮|布丁|Pudding;🍯|蜂蜜|Honey;🍦|冰淇淋|Ice Cream;🍨|冰淇淋杯|Sundae;🍧|刨冰|Shaved Ice;🍘|米饼|Rice Cracker;🥣|甜汤|Sweet Soup;🧇|华夫饼|Waffle;🥞|松饼|Pancakes;🍞|吐司|Toast;🥐|可颂|Croissant;🥖|法棍|Baguette;🧀|芝士蛋糕|Cheesecake;🍓|草莓蛋糕|Strawberry Cake;🍒|樱桃派|Cherry Pie;🥛|牛奶|Milk;🧃|果汁|Juice Box;🥤|汽水|Soda;🍵|抹茶|Matcha;☕|咖啡|Coffee;🍶|清酒|Sake;🥂|香槟|Champagne;🍹|鸡尾酒|Cocktail;🧉|马黛茶|Mate;🍼|牛奶瓶|Milk Bottle;🥜|花生酱|Peanut Butter;🧊|冰块|Ice;🍾|香槟瓶|Champagne Bottle;🍥|鱼板|Fish Cake;🍻|干杯啤酒|Beers;🍽️|甜品餐盘|Dessert Plate;🥮|月饼|Mooncake;🍡|三色团子|Dango;🍢|丸子串|Skewer;🥠|幸运饼干|Fortune Cookie;🥧|苹果派|Apple Pie;🥄|甜品勺|Dessert Spoon;🍴|餐叉|Fork;🍌|香蕉船|Banana Split;🍇|葡萄|Grapes;🍉|西瓜冰沙|Watermelon Sorbet;🍊|橙子|Orange"),
+    space: P("🚀|火箭|Rocket;🛸|飞碟|UFO;🛰️|卫星|Satellite;🌕|满月|Full Moon;🌖|盈凸月|Gibbous Moon;🌗|下弦月|Last Quarter Moon;🌘|残月|Waning Moon;🌑|新月|New Moon;🌒|眉月|Waxing Moon;🌓|上弦月|First Quarter Moon;🌔|凸月|Waxing Gibbous;🌙|弯月|Crescent Moon;🌛|月亮脸|Moon Face;🌜|晚月脸|Late Moon Face;🌚|新月脸|New Moon Face;🌝|满月脸|Full Moon Face;🌞|太阳脸|Sun Face;🌟|闪亮星|Glowing Star;💫|流星|Dizzy Star;✨|闪烁|Sparkles;☄️|彗星|Comet;🌠|流星雨|Shooting Star;🌍|地球|Earth;🌎|美洲地球|Earth Americas;🌏|亚洲地球|Earth Asia;🪐|土星|Saturn;🔭|望远镜|Telescope;📡|卫星天线|Satellite Dish;👽|外星人|Alien;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🌌|银河|Milky Way;🌐|经纬地球|Globe;🔮|水晶球|Crystal Ball;🔥|火焰|Fire;🧲|磁铁|Magnet;🔬|显微镜|Microscope;🌡️|温度计|Thermometer;💡|灯泡|Light Bulb;🔋|电池|Battery;🌃|星夜|Starry Night;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;💥|爆炸|Collision;⚡|闪电|Lightning;❄️|雪花|Snowflake;🧊|冰块|Ice;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;🌈|彩虹|Rainbow;☁️|云朵|Cloud;🌊|海浪|Wave;🔦|手电筒|Flashlight"),
+    sports: P("⚽|足球|Soccer;🏀|篮球|Basketball;🏈|橄榄球|Football;⚾|棒球|Baseball;🥎|垒球|Softball;🎾|网球|Tennis;🏐|排球|Volleyball;🏉|英式橄榄球|Rugby;🎱|台球|Pool;🏓|乒乓球|Ping Pong;🏸|羽毛球|Badminton;🏒|冰球|Ice Hockey;🏑|曲棍球|Field Hockey;🥍|长曲棍球|Lacrosse;🏏|板球|Cricket;⛳|高尔夫|Golf;🏹|射箭|Archery;🎣|钓鱼|Fishing;🥊|拳击|Boxing;🥋|空手道|Karate;🛹|滑板|Skateboard;🛷|雪橇|Sled;⛸️|冰鞋|Ice Skate;🥌|冰壶|Curling;🎿|滑雪|Skiing;🏂|单板滑雪|Snowboard;🏋️|举重|Weightlifting;🤸|体操|Gymnastics;🤺|击剑|Fencing;🤾|手球|Handball;🏌️|高尔夫手|Golfer;🏇|赛马|Horse Racing;🚣|划船|Rowing;🚵|山地骑行|Mountain Biking;🚴|骑行|Cycling;🏃|跑步|Running;🏊|游泳|Swimming;🤽|水球|Water Polo;🧗|攀岩|Climbing;🏄|冲浪|Surfing;🪂|跳伞|Parachute;🏆|奖杯|Trophy;🥇|金牌|Gold Medal;🥈|银牌|Silver Medal;🥉|铜牌|Bronze Medal;🏅|奖牌|Medal;🎽|跑步背心|Running Shirt;👟|跑鞋|Sneaker;🧢|棒球帽|Cap;🎯|飞镖|Darts"),
+    vehicles: P("🚗|汽车|Car;🚕|出租车|Taxi;🚙|越野车|SUV;🚌|公交车|Bus;🚎|无轨电车|Trolleybus;🏎️|赛车|Race Car;🚓|警车|Police Car;🚑|救护车|Ambulance;🚒|消防车|Fire Truck;🚐|面包车|Minivan;🚘|迎面汽车|Oncoming Car;🚚|货车|Truck;🚛|卡车|Semi Truck;🚜|拖拉机|Tractor;🏍️|摩托车|Motorcycle;🛵|小摩托|Scooter;🚲|自行车|Bicycle;🛴|滑板车|Kick Scooter;🛺|三轮车|Auto Rickshaw;🚂|火车头|Locomotive;🚆|火车|Train;🚄|高铁|Bullet Train;🚅|动车|High-Speed Train;🚈|轻轨|Light Rail;🚇|地铁|Metro;🚊|电车|Tram;🚉|火车站|Station;✈️|飞机|Airplane;🛩️|小飞机|Small Plane;🛫|起飞|Takeoff;🛬|降落|Landing;🚁|直升机|Helicopter;🛸|飞碟|UFO;🚀|火箭|Rocket;🛰️|卫星|Satellite;⛵|帆船|Sailboat;🚤|快艇|Speedboat;🛥️|游艇|Yacht;🚢|轮船|Ship;⛴️|渡轮|Ferry;🛶|独木舟|Canoe;🚠|缆车|Cable Car;🚡|索道|Aerial Tramway;🛎️|服务铃|Bell;⛽|加油站|Gas Station;🚏|公交站|Bus Stop;🚦|红绿灯|Traffic Light;🚨|警灯|Police Light;🛒|购物车|Cart;🛣️|高速公路|Highway;🛤️|铁路轨道|Railway Track"),
+    garden: P("🌸|樱花|Cherry Blossom;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🌞|太阳公公|Sun Face;🍇|葡萄|Grapes;💐|花束|Bouquet;🌾|稻穗|Sheaf of Rice;🌿|香草|Herb;🍀|四叶草|Four-Leaf Clover;☘️|三叶草|Shamrock;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaf;🍃|绿叶|Leaf;🌱|嫩芽|Seedling;🌲|松树|Pine Tree;🌳|大树|Deciduous Tree;🌴|棕榈树|Palm Tree;🌵|仙人掌|Cactus;🎋|竹子|Tanabata Tree;🎍|松竹装饰|Pine Decoration;🌦️|太阳雨|Sun Shower;🍄|蘑菇|Mushroom;🌰|栗子|Chestnut;🥚|鸡蛋|Egg;🐣|小鸡|Hatching Chick;🦋|蝴蝶|Butterfly;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🐌|蜗牛|Snail;🐛|毛毛虫|Bug;🐜|蚂蚁|Ant;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌧️|下雨|Rain;💧|水滴|Droplet;🧤|园艺手套|Gardening Gloves;🚿|浇水|Shower;🌡️|温度计|Thermometer;🏡|花园小屋|Garden House;💮|白花|White Flower;🏵️|玫瑰花环|Rosette;🌤️|晴间多云|Sunny Spell"),
+    music: P("🎸|吉他|Guitar;🎹|钢琴|Piano;🥁|鼓|Drum;🎺|小号|Trumpet;🎻|小提琴|Violin;🎷|萨克斯|Saxophone;🪕|班卓琴|Banjo;🎤|麦克风|Microphone;🎙️|录音麦克风|Studio Mic;🎧|耳机|Headphones;📻|收音机|Radio;📺|电视|TV;🎥|摄像机|Movie Camera;📹|录像机|Video Camera;💿|光盘|CD;📀|影碟|DVD;📼|录像带|Videotape;🎞️|电影胶片|Film;🎬|场记板|Clapper Board;🎭|戏剧面具|Theater Masks;🎪|马戏团|Circus Tent;🎫|演出门票|Ticket;🎟️|入场券|Admission Ticket;💃|舞者|Dancer;🕺|跳舞|Man Dancing;🩰|芭蕾舞鞋|Ballet Shoes;🔔|铃铛|Bell;🛎️|服务铃|Service Bell;📢|喇叭|Megaphone;📣|扩音器|Loudspeaker;🔊|大音量|Speaker;🔉|中音量|Medium Volume;🔈|小音量|Low Volume;🎚️|调音台|Mixer;🎛️|控制台|Control Panel;🎵|音符|Musical Note;🎶|旋律|Musical Notes;🎼|乐谱|Musical Score;📯|号角|Horn;👏|鼓掌|Clapping;🎉|派对拉炮|Party Popper;🎊|彩带球|Confetti Ball;🎈|气球|Balloon;✨|闪烁|Sparkles;🌟|闪亮星|Glowing Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;📷|相机|Camera;📸|闪光相机|Camera Flash;🎩|魔术帽|Top Hat"),
+    toys: P("🧸|泰迪熊|Teddy Bear;🪀|溜溜球|Yo-Yo;🪁|风筝|Kite;🎮|游戏手柄|Game Controller;🕹️|摇杆|Joystick;🎲|骰子|Dice;🧩|拼图|Puzzle;♟️|国际象棋|Chess Pawn;🎯|飞镖靶|Darts;🎳|保龄球|Bowling;🎪|马戏团|Circus;🎠|旋转木马|Carousel;🎡|摩天轮|Ferris Wheel;🎢|过山车|Roller Coaster;🧱|积木|Bricks;🎎|日本娃娃|Japanese Dolls;🎨|调色板|Palette;🖍️|蜡笔|Crayon;✏️|铅笔|Pencil;📚|书本|Books;🔮|水晶球|Crystal Ball;✨|闪烁星星|Sparkles;🎩|魔术帽|Top Hat;🃏|小丑牌|Joker;🀄|麻将|Mahjong;🎴|花牌|Flower Cards;🐰|兔子玩偶|Bunny Plush;🔫|水枪|Water Gun;🎏|鲤鱼旗|Carp Streamer;🎰|老虎机|Slot Machine;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🚀|玩具火箭|Toy Rocket;🚁|玩具直升机|Toy Helicopter;🚂|玩具火车|Toy Train;🚗|玩具车|Toy Car;🏰|城堡|Castle;🍬|糖果|Candy;🎊|五彩纸屑|Confetti Ball;🎉|派对拉炮|Party Popper;🎈|气球|Balloon;🎁|礼物|Gift;🧦|袜子|Sock;🎭|戏剧面具|Theater Masks;🛷|雪橇|Sled;⚽|玩具足球|Toy Soccer;🏀|玩具篮球|Toy Basketball;🥏|飞盘|Frisbee"),
+    bugsbirds: P("🦋|蝴蝶|Butterfly;🐛|毛毛虫|Caterpillar;🐜|蚂蚁|Ant;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🦂|蝎子|Scorpion;🦟|蚊子|Mosquito;🐌|蜗牛|Snail;🦐|小虾|Shrimp;🦀|螃蟹|Crab;🐦|小鸟|Bird;🐤|小鸡|Chick;🐣|孵化小鸡|Hatching Chick;🐥|站立小鸡|Baby Chick;🐧|企鹅|Penguin;🦅|老鹰|Eagle;🦆|鸭子|Duck;🦢|天鹅|Swan;🦉|猫头鹰|Owl;🦩|火烈鸟|Flamingo;🦜|鹦鹉|Parrot;🦚|孔雀|Peacock;🦃|火鸡|Turkey;🐔|母鸡|Chicken;🐓|公鸡|Rooster;🕊️|鸽子|Dove;🦇|蝙蝠|Bat;🥚|鸡蛋|Egg;🕸️|蜘蛛网|Spider Web;🦎|蜥蜴|Lizard;🐢|乌龟|Turtle;🐸|青蛙|Frog;🐍|小蛇|Snake;🌿|树叶|Leaf;🌳|大树|Tree;🌸|樱花|Blossom;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🍃|绿叶|Green Leaf;🌱|嫩芽|Sprout;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🍄|蘑菇|Mushroom;🌈|彩虹|Rainbow;💧|水滴|Droplet"),
+    weather: P("☀️|晴天|Sunny;🌤️|多云转晴|Mostly Sunny;⛅|多云|Partly Cloudy;☁️|阴天|Cloudy;🌧️|下雨|Rainy;⛈️|雷阵雨|Thunderstorm;🌩️|闪电|Lightning;🌦️|太阳雨|Sun Shower;🌨️|下雪|Snowy;❄️|雪花|Snowflake;☃️|雪人|Snowman;⛄|小雪人|Snowman;🌬️|大风|Wind;💨|疾风|Gust;🌪️|龙卷风|Tornado;🌫️|大雾|Fog;🌈|彩虹|Rainbow;🌊|海浪|Wave;💧|雨滴|Raindrop;💦|水花|Splash;🔥|火焰|Fire;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;⛰️|山峰|Mountain;🏝️|海岛|Island;🏖️|沙滩|Beach;🏜️|沙漠|Desert;🌅|日出|Sunrise;🌄|山间日出|Mountain Sunrise;🌇|日落|Sunset;🌆|黄昏城市|City Dusk;🌃|夜晚|Night;🌌|银河|Galaxy;🌙|月亮|Moon;🌟|闪亮星|Glowing Star;☄️|彗星|Comet;🪐|行星|Planet;🌡️|温度计|Thermometer;🧊|冰块|Ice;🌀|旋风|Cyclone;🌸|樱花|Blossom;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🌱|新芽|Sprout;🌴|棕榈树|Palm;🌵|仙人掌|Cactus;🎋|竹子|Bamboo;🌾|稻田|Rice Field;🌻|向日葵|Sunflower;🌷|郁金香|Tulip"),
+    pets: P("🐶|小狗|Dog;🐱|小猫|Cat;🐭|仓鼠|Hamster;🐰|兔子|Rabbit;🦊|狐狸|Fox;🐻|小熊|Bear;🐼|熊猫|Panda;🐨|考拉|Koala;🐯|老虎|Tiger;🦁|狮子|Lion;🐷|小猪|Pig;🐸|青蛙|Frog;🐵|猴子|Monkey;🐔|小鸡|Chicken;🐧|企鹅|Penguin;🐦|小鸟|Bird;🦆|鸭子|Duck;🦉|猫头鹰|Owl;🐺|小狼|Wolf;🐗|野猪|Boar;🐴|小马|Horse;🦄|独角兽|Unicorn;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐌|蜗牛|Snail;🐞|瓢虫|Ladybug;🐠|金鱼|Goldfish;🐟|小鱼|Fish;🐢|乌龟|Turtle;🦎|蜥蜴|Lizard;🐙|章鱼|Octopus;🦜|鹦鹉|Parrot;🐩|贵宾犬|Poodle;🐕|狗狗|Dog;🐈|猫咪|Cat;🐖|小猪|Pig;🦮|导盲犬|Guide Dog;🐑|绵羊|Sheep;🕊️|鸽子|Dove;🦩|火烈鸟|Flamingo;🦚|孔雀|Peacock;🦢|天鹅|Swan;🦥|树懒|Sloth;🦦|水獭|Otter;🦨|臭鼬|Skunk;🦘|袋鼠|Kangaroo;🦡|獾|Badger;🐾|爪印|Paw Prints;🦴|骨头|Bone;🎾|网球|Tennis Ball;🧶|毛线球|Yarn Ball"),
+    festival: P("🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🤶|圣诞奶奶|Mrs. Claus;🦌|驯鹿|Reindeer;⛄|雪人|Snowman;🎁|礼物|Gift;🔔|铃铛|Bell;🕯️|蜡烛|Candle;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|红灯笼|Red Lantern;🧧|红包|Red Envelope;🐉|龙|Dragon;🦁|舞狮|Lion Dance;🥮|月饼|Mooncake;🌕|满月|Full Moon;🐰|玉兔|Jade Rabbit;🎃|南瓜灯|Jack-o-Lantern;👻|幽灵|Ghost;🦇|蝙蝠|Bat;🕸️|蜘蛛网|Spider Web;🍬|糖果|Candy;🎭|面具|Mask;🎉|派对|Party;🎊|彩带球|Confetti;🎈|气球|Balloon;🥂|干杯|Cheers;🍾|香槟|Champagne;🎂|生日蛋糕|Birthday Cake;🕎|烛台|Menorah;🪔|油灯|Diya Lamp;🌙|弯月|Crescent Moon;🌟|闪亮星|Glowing Star;🎋|七夕竹|Tanabata;🎍|门松|Kadomatsu;🌸|樱花|Cherry Blossom;🎏|鲤鱼旗|Carp Streamer;🎐|风铃|Wind Chime;🥚|彩蛋|Easter Egg;🐣|复活节小鸡|Easter Chick;🐇|复活节兔子|Easter Bunny;🍫|巧克力|Chocolate;💝|爱心礼物|Heart Gift;💐|花束|Bouquet;🌹|玫瑰|Rose;👑|皇冠|Crown;🏆|奖杯|Trophy;🎖️|勋章|Medal;🎶|音乐|Music"),
+    jobs: P("🩺|听诊器|Stethoscope;💉|注射器|Syringe;💊|药丸|Pill;🌡️|温度计|Thermometer;🔬|显微镜|Microscope;🧪|试管|Test Tube;🧫|培养皿|Petri Dish;🔭|望远镜|Telescope;🚀|火箭|Rocket;✈️|飞机|Airplane;🚁|直升机|Helicopter;🚒|消防车|Fire Truck;🚓|警车|Police Car;🚑|救护车|Ambulance;🚜|拖拉机|Tractor;🚚|货车|Truck;🔧|扳手|Wrench;🔨|锤子|Hammer;⚙️|齿轮|Gear;🧰|工具箱|Toolbox;🍳|煎锅|Cooking Pan;🔪|菜刀|Kitchen Knife;🎨|调色板|Palette;🖌️|画笔|Paintbrush;✏️|铅笔|Pencil;📏|尺子|Ruler;✂️|剪刀|Scissors;📚|书本|Books;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;📷|相机|Camera;🎥|摄像机|Movie Camera;💼|公文包|Briefcase;🏥|医院|Hospital;🏫|学校|School;🏭|工厂|Factory;⛏️|镐子|Pick;🪓|斧头|Axe;⚖️|天平|Scales;🧲|磁铁|Magnet;🔩|螺母螺栓|Nut and Bolt;📐|三角尺|Triangular Ruler;📊|柱状图|Bar Chart;🩹|创可贴|Bandage;🧯|灭火器|Fire Extinguisher;🦺|安全背心|Safety Vest;⛑️|救援头盔|Rescue Helmet;🥽|护目镜|Goggles;🥼|实验服|Lab Coat;🧤|手套|Gloves;🎓|毕业帽|Graduation Cap;📋|剪贴板|Clipboard;🚢|轮船|Ship;🚂|火车|Train;🏗️|建筑工地|Construction;🛠️|锤子扳手|Hammer and Wrench;🌾|稻穗|Sheaf of Rice"),
+    shapes: P("🔴|红圆形|Red Circle;🟠|橙圆形|Orange Circle;🟡|黄圆形|Yellow Circle;🟢|绿圆形|Green Circle;🔵|蓝圆形|Blue Circle;🟣|紫圆形|Purple Circle;⚫|黑圆形|Black Circle;⚪|白圆形|White Circle;🟤|棕圆形|Brown Circle;🟥|红方形|Red Square;🟧|橙方形|Orange Square;🟨|黄方形|Yellow Square;🟩|绿方形|Green Square;🟦|蓝方形|Blue Square;🟪|紫方形|Purple Square;⬛|黑方形|Black Square;⬜|白方形|White Square;🟫|棕方形|Brown Square;❤️|红爱心|Red Heart;🧡|橙爱心|Orange Heart;💛|黄爱心|Yellow Heart;💚|绿爱心|Green Heart;💙|蓝爱心|Blue Heart;💜|紫爱心|Purple Heart;🖤|黑爱心|Black Heart;🤍|白爱心|White Heart;🤎|棕爱心|Brown Heart;⭐|星星|Star;🌟|闪亮星星|Glowing Star;💠|蓝色菱形|Blue Diamond;🔷|大蓝菱形|Large Blue Diamond;🔶|大橙菱形|Large Orange Diamond;🔹|小蓝菱形|Small Blue Diamond;🔸|小橙菱形|Small Orange Diamond;🔺|红三角|Red Triangle Up;🔻|红倒三角|Red Triangle Down;🔼|上三角|Triangle Up;🔽|下三角|Triangle Down;🌕|圆月亮|Full Moon;🌙|弯月亮|Crescent Moon;☀️|太阳|Sun;⭕|红圆圈|Red Circle Mark;🔳|白方按钮|White Square Button;🔲|黑方按钮|Black Square Button"),
+    numbers: P("0|数字 0|Number 0;1|数字 1|Number 1;2|数字 2|Number 2;3|数字 3|Number 3;4|数字 4|Number 4;5|数字 5|Number 5;6|数字 6|Number 6;7|数字 7|Number 7;8|数字 8|Number 8;9|数字 9|Number 9;10|数字 10|Number 10;11|数字 11|Number 11;12|数字 12|Number 12;13|数字 13|Number 13;14|数字 14|Number 14;15|数字 15|Number 15;16|数字 16|Number 16;17|数字 17|Number 17;18|数字 18|Number 18;19|数字 19|Number 19;20|数字 20|Number 20;21|数字 21|Number 21;22|数字 22|Number 22;23|数字 23|Number 23;24|数字 24|Number 24;25|数字 25|Number 25;26|数字 26|Number 26;27|数字 27|Number 27;28|数字 28|Number 28;29|数字 29|Number 29;30|数字 30|Number 30"),
+    letters: P("A|字母 A|Letter A;B|字母 B|Letter B;C|字母 C|Letter C;D|字母 D|Letter D;E|字母 E|Letter E;F|字母 F|Letter F;G|字母 G|Letter G;H|字母 H|Letter H;I|字母 I|Letter I;J|字母 J|Letter J;K|字母 K|Letter K;L|字母 L|Letter L;M|字母 M|Letter M;N|字母 N|Letter N;O|字母 O|Letter O;P|字母 P|Letter P;Q|字母 Q|Letter Q;R|字母 R|Letter R;S|字母 S|Letter S;T|字母 T|Letter T;U|字母 U|Letter U;V|字母 V|Letter V;W|字母 W|Letter W;X|字母 X|Letter X;Y|字母 Y|Letter Y;Z|字母 Z|Letter Z"),
+    emotions: P("😀|开心大笑|Grinning;😃|笑眼|Big Smile;😄|眯眼笑|Happy Smile;😁|露齿笑|Beaming;😆|大笑|Laughing;😅|流汗笑|Sweaty Smile;😂|笑哭|Tears of Joy;🤣|笑倒|Rolling Laugh;😊|微笑|Smiling;😇|天使笑|Angel Smile;🙂|淡淡笑|Slight Smile;🙃|倒脸笑|Upside Down;😉|眨眼|Winking;😌|安心|Relieved;😍|爱心眼|Heart Eyes;🥰|幸福笑|Loved Smile;😘|飞吻|Blowing Kiss;😗|亲亲|Kissing;😙|闭眼亲|Kiss Smile;😚|害羞亲|Shy Kiss;😋|好吃脸|Yummy;😛|吐舌头|Tongue Out;😝|调皮脸|Silly Face;😜|眨眼吐舌|Winking Tongue;🤪|搞怪脸|Zany Face;😎|墨镜脸|Cool Shades;🥳|派对脸|Party Face;😏|得意脸|Smirk;🙄|翻白眼|Eye Roll;😬|龇牙脸|Grimacing;🤗|拥抱脸|Hugging;🤔|思考脸|Thinking;🤭|捂嘴笑|Giggling;🤫|嘘声脸|Shushing;😴|睡觉脸|Sleepy;😪|困倦脸|Drowsy;🥱|打哈欠|Yawning;😷|口罩脸|Mask Face;🤒|生病脸|Sick Face;🥴|晕乎脸|Woozy;😵|晕倒脸|Dizzy;🤯|爆炸头|Exploding Head;🥵|热脸|Hot Face;🥶|冷脸|Cold Face;😱|惊吓脸|Screaming;😨|害怕脸|Fearful;😰|焦虑脸|Anxious;😢|流泪脸|Crying;😭|大哭脸|Loudly Crying;🥺|委屈脸|Pleading"),
+    body: P("👀|眼睛|Eyes;👁️|一只眼睛|Eye;👂|耳朵|Ear;👃|鼻子|Nose;👄|嘴巴|Mouth;👅|舌头|Tongue;🦷|牙齿|Tooth;🧠|大脑|Brain;❤️|心脏|Heart;🦴|骨头|Bone;💪|手臂肌肉|Strong Arm;✋|手掌|Raised Hand;🤚|手背|Back of Hand;🖐️|五指张开|Open Hand;🖖|打招呼手|Vulcan Hand;👌|OK 手势|OK Hand;🤏|捏一捏|Pinching Hand;✌️|胜利手势|Victory Hand;🤞|许愿手势|Crossed Fingers;🤟|我爱你手势|Love-You Hand;🤙|打电话手势|Call-Me Hand;👍|大拇指赞|Thumbs Up;👎|大拇指倒|Thumbs Down;👊|拳头|Fist;✊|握拳|Raised Fist;👏|拍手|Clapping;🙌|举手欢呼|Raised Hands;👐|拥抱手|Open Hands;🤲|双手托起|Palms Up;🙏|合十手|Folded Hands;✍️|写字手|Writing Hand;💅|涂指甲|Nail Polish;🦵|大腿|Leg;🦶|脚丫|Foot;👣|脚印|Footprints;🦾|机械手臂|Mechanical Arm"),
+    clothes: P("👕|T恤|T-Shirt;👖|牛仔裤|Jeans;👗|连衣裙|Dress;👔|衬衫领带|Shirt and Tie;👚|女装上衣|Blouse;👘|和服|Kimono;🥻|纱丽|Sari;🩱|连体泳衣|Swimsuit;🩳|短裤|Shorts;👞|皮鞋|Dress Shoe;👟|运动鞋|Sneaker;🥾|靴子|Hiking Boot;🥿|平底鞋|Flat Shoe;👠|高跟鞋|High Heel;👡|凉鞋|Sandal;👢|长靴|Boot;👒|草帽|Sun Hat;🎩|礼帽|Top Hat;🧢|棒球帽|Cap;👑|皇冠|Crown;👓|眼镜|Glasses;🕶️|墨镜|Sunglasses;🥽|护目镜|Goggles;🧣|围巾|Scarf;🧤|手套|Gloves;🧥|外套|Coat;🥼|白大褂|Lab Coat;🦺|安全背心|Safety Vest;⛑️|头盔|Helmet;🎒|双肩包|Backpack;👝|手包|Clutch;👛|钱包|Purse;👜|手提包|Handbag;💼|公文包|Briefcase;🌂|雨伞|Umbrella;☂️|撑开的伞|Open Umbrella;🧦|袜子|Socks;🩰|芭蕾舞鞋|Ballet Shoes"),
+    home: P("🛏️|床|Bed;🛋️|沙发|Sofa;🪑|椅子|Chair;🚪|门|Door;🛁|浴缸|Bathtub;🚿|淋浴|Shower;🚽|马桶|Toilet;🧻|卷纸|Toilet Paper;🧴|乳液瓶|Lotion Bottle;🧼|肥皂|Soap;🧽|海绵|Sponge;🧺|篮子|Basket;🧹|扫帚|Broom;🔑|钥匙|Key;🗝️|老钥匙|Old Key;✂️|剪刀|Scissors;🧷|别针|Safety Pin;🧵|线轴|Thread;🕯️|蜡烛|Candle;🔦|手电筒|Flashlight;💡|灯泡|Light Bulb;⏰|闹钟|Alarm Clock;🕰️|座钟|Mantel Clock;📺|电视|Television;📻|收音机|Radio;📱|手机|Phone;☎️|电话|Telephone;💻|电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;🖱️|鼠标|Mouse;📚|书本|Books;✏️|铅笔|Pencil;🍽️|餐盘|Plate Setting;🥄|勺子|Spoon;🍴|叉子|Fork;🥢|筷子|Chopsticks;🍵|茶杯|Teacup;☕|咖啡杯|Coffee Cup;🧸|泰迪熊|Teddy Bear;🖼️|相框|Picture Frame;🗓️|日历|Calendar;🛒|购物车|Shopping Cart;🧰|工具箱|Toolbox;🔧|扳手|Wrench;🔨|锤子|Hammer;🔩|螺丝|Bolt;🧯|灭火器|Fire Extinguisher;🧲|磁铁|Magnet;🔔|铃铛|Bell"),
+    farm: P("🐄|奶牛|Cow;🐖|猪|Pig;🐎|马|Horse;🐏|公羊|Ram;🐐|山羊|Goat;🐓|公鸡|Rooster;🐔|母鸡|Chicken;🐣|小鸡宝宝|Baby Chick;🐤|小鸡|Chick;🦆|鸭子|Duck;🐕|农场狗|Farm Dog;🐈|农场猫|Farm Cat;🐇|兔子|Rabbit;🦃|火鸡|Turkey;🐂|公牛|Ox;🐃|水牛|Water Buffalo;🐮|牛脸|Cow Face;🐷|猪脸|Pig Face;🐴|马脸|Horse Face;🐑|绵羊|Sheep;🐰|兔脸|Rabbit Face;🐶|狗脸|Dog Face;🐱|猫脸|Cat Face;🐭|老鼠|Mouse;🦊|狐狸|Fox;🌾|稻穗|Rice Sheaf;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🎃|南瓜|Pumpkin;🍎|苹果|Apple;🍐|梨子|Pear;🍓|草莓|Strawberry;🍇|葡萄|Grapes;🍉|西瓜|Watermelon;🍅|番茄|Tomato;🥒|黄瓜|Cucumber;🥬|青菜|Lettuce;🌻|向日葵|Sunflower;🚜|拖拉机|Tractor;🥚|鸡蛋|Egg;🥛|牛奶|Milk;🧀|奶酪|Cheese;🌱|秧苗|Seedling;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐞|瓢虫|Ladybug;🏡|农舍|Farm House;🧺|采摘篮|Basket"),
+    seasons: P("🌸|樱花|Cherry Blossom;🌷|郁金香|Tulip;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌼|小雏菊|Daisy;🌺|扶桑花|Hibiscus;🌱|新芽|Sprout;🌿|绿叶|Herb;🍀|四叶草|Clover;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌤️|晴天|Sunny Day;⛅|多云|Partly Cloudy;🏖️|沙滩|Beach;🍉|西瓜|Watermelon;🍦|冰淇淋|Ice Cream;🕶️|墨镜|Sunglasses;⛱️|沙滩伞|Beach Umbrella;🌊|海浪|Wave;🏄|冲浪|Surfing;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🍃|飘叶|Leaf in Wind;🎃|南瓜|Pumpkin;🌾|稻田|Rice Field;🍎|苹果|Apple;🍐|梨|Pear;🍇|葡萄|Grapes;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;❄️|雪花|Snowflake;☃️|大雪人|Big Snowman;⛄|雪人|Snowman;🌨️|下雪|Snowfall;🧣|围巾|Scarf;🧤|手套|Gloves;🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🦌|驯鹿|Reindeer;🔥|篝火|Fire;☕|热咖啡|Hot Coffee;🍵|热茶|Hot Tea;🌙|月亮|Moon;⭐|星星|Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|灯笼|Lantern;🌕|满月|Full Moon;🥮|月饼|Mooncake"),
+    school: P("📚|书堆|Books;📖|打开的书|Open Book;📓|笔记本|Notebook;📒|账本|Ledger;📔|日记本|Diary;📕|红书|Red Book;📗|绿书|Green Book;📘|蓝书|Blue Book;📙|橙书|Orange Book;📝|备忘录|Memo;✏️|铅笔|Pencil;✒️|钢笔尖|Pen Nib;🖊️|圆珠笔|Pen;🖋️|钢笔|Fountain Pen;🖍️|蜡笔|Crayon;📏|直尺|Ruler;📐|三角尺|Triangle Ruler;✂️|剪刀|Scissors;📌|图钉|Pushpin;📍|圆图钉|Round Pin;📎|回形针|Paperclip;🖇️|连环回形针|Linked Clips;📋|写字板|Clipboard;📁|文件夹|Folder;📂|打开的文件夹|Open Folder;🎒|书包|Backpack;🔔|上课铃|School Bell;🔍|放大镜|Magnifier;🧲|磁铁|Magnet;🌍|地球仪|Globe;🎨|调色盘|Art Palette;🖌️|画笔|Paintbrush;⚽|足球|Soccer Ball;🏀|篮球|Basketball;🎵|音符|Music Note;📷|相机|Camera;⏰|闹钟|Alarm Clock;💡|灯泡|Light Bulb;🔑|钥匙|Key;🧮|算盘|Abacus;🔬|显微镜|Microscope;🔭|望远镜|Telescope;🧪|试管|Test Tube;📊|图表|Chart;🗺️|地图|Map;🖥️|台式电脑|Desktop;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖱️|鼠标|Mouse;🗑️|废纸篓|Waste Basket")
+  };
+
+/* ================= 背景：22 种浅色低饱和护眼色 ================= */
+var BGS = [
+  { id:"sky",    zh:"浅天蓝",   en:"Soft Sky",     css:"linear-gradient(180deg,#dceefb 0%,#eaf5fd 55%,#e2f2e4 100%)", deco:"hills",  tint:"rgba(140,190,150,.20)" },
+  { id:"cream",  zh:"奶油云朵", en:"Cream Cloud",  css:"linear-gradient(180deg,#fdf3d8 0%,#fdf7e3 60%,#fdeed3 100%)", deco:"clouds", tint:"rgba(240,200,130,.16)" },
+  { id:"mint",   zh:"薄荷草地", en:"Mint Meadow",  css:"linear-gradient(180deg,#e2f4e6 0%,#eaf7ee 55%,#d8efdc 100%)", deco:"hills",  tint:"rgba(110,185,130,.20)" },
+  { id:"pink",   zh:"淡粉花园", en:"Pink Garden",  css:"linear-gradient(180deg,#fdeef1 0%,#fdf3f0 55%,#fdeeda 100%)", deco:"hills",  tint:"rgba(235,160,175,.18)" },
+  { id:"sand",   zh:"米白沙滩", en:"Sandy Beach",  css:"linear-gradient(180deg,#e8f3f8 0%,#f7efdb 58%,#f3e6c8 100%)", deco:"waves",  tint:"rgba(120,180,215,.20)" },
+  { id:"lav",    zh:"浅紫薰衣草", en:"Lavender",   css:"linear-gradient(180deg,#efeaf8 0%,#f3effa 55%,#e9e2f4 100%)", deco:"hills",  tint:"rgba(165,145,205,.18)" },
+  { id:"wheat",  zh:"淡黄麦田", en:"Wheat Field",  css:"linear-gradient(180deg,#e6f0fa 0%,#fbf3d3 55%,#f7eabd 100%)", deco:"hills",  tint:"rgba(215,185,95,.20)" },
+  { id:"lake",   zh:"浅青湖面", en:"Pale Lake",    css:"linear-gradient(180deg,#e0f2f0 0%,#e9f6f3 55%,#d9efec 100%)", deco:"waves",  tint:"rgba(105,180,175,.20)" },
+  { id:"dawn",   zh:"淡橙晨光", en:"Morning Glow", css:"linear-gradient(180deg,#fdeeda 0%,#fdf3e2 55%,#fde8d2 100%)", deco:"clouds", tint:"rgba(240,175,110,.16)" },
+  { id:"moonw",  zh:"月白",     en:"Moon White",   css:"linear-gradient(180deg,#eef1f6 0%,#f3f5f8 55%,#e9edf3 100%)", deco:"clouds", tint:"rgba(150,170,200,.15)" },
+  { id:"apricot",zh:"浅杏",     en:"Apricot",      css:"linear-gradient(180deg,#fdf0dd 0%,#fdf5e7 55%,#fcebd2 100%)", deco:"hills",  tint:"rgba(235,180,120,.16)" },
+  { id:"peach",  zh:"淡桃",     en:"Peach",        css:"linear-gradient(180deg,#fdeae4 0%,#fdf0ea 55%,#fce2d8 100%)", deco:"clouds", tint:"rgba(240,165,140,.16)" },
+  { id:"aqua",   zh:"浅水绿",   en:"Aqua Green",   css:"linear-gradient(180deg,#e2f4ec 0%,#ecf8f1 55%,#dbf0e4 100%)", deco:"waves",  tint:"rgba(110,195,165,.18)" },
+  { id:"sakura", zh:"淡樱粉",   en:"Sakura",       css:"linear-gradient(180deg,#fdeef3 0%,#fdf4f6 55%,#fce6ee 100%)", deco:"hills",  tint:"rgba(240,165,190,.18)" },
+  { id:"grayblue",zh:"浅灰蓝",  en:"Gray Blue",    css:"linear-gradient(180deg,#e6eef4 0%,#eef3f7 55%,#dfe9f0 100%)", deco:"clouds", tint:"rgba(140,170,200,.16)" },
+  { id:"paper",  zh:"暖纸色",   en:"Warm Paper",   css:"linear-gradient(180deg,#faf3e3 0%,#fbf6ea 55%,#f6ecd7 100%)", deco:"hills",  tint:"rgba(215,185,130,.15)" },
+  { id:"milkgrn",zh:"浅奶绿",   en:"Milky Green",  css:"linear-gradient(180deg,#eef5e0 0%,#f3f8e8 55%,#e8f1d4 100%)", deco:"hills",  tint:"rgba(160,195,110,.18)" },
+  { id:"bluegray",zh:"淡蓝灰",  en:"Blue Gray",    css:"linear-gradient(180deg,#e3ebf2 0%,#eaf0f5 55%,#dbe5ee 100%)", deco:"waves",  tint:"rgba(130,165,200,.17)" },
+  { id:"champ",  zh:"浅香槟",   en:"Champagne",    css:"linear-gradient(180deg,#faf0dc 0%,#fbf4e4 55%,#f7ead0 100%)", deco:"clouds", tint:"rgba(225,190,120,.15)" },
+  { id:"lotus",  zh:"浅藕荷",   en:"Lotus Pink",   css:"linear-gradient(180deg,#f6ecf1 0%,#f9f1f5 55%,#f2e2ec 100%)", deco:"hills",  tint:"rgba(205,155,185,.17)" },
+  { id:"melon",  zh:"淡蜜瓜",   en:"Melon",        css:"linear-gradient(180deg,#f3f6dd 0%,#f8fae8 55%,#eff3d0 100%)", deco:"hills",  tint:"rgba(185,200,105,.17)" },
+  { id:"lotusleaf",zh:"浅荷叶", en:"Lotus Leaf",   css:"linear-gradient(180deg,#e4f2e2 0%,#ecf6ea 55%,#ddefdb 100%)", deco:"waves",  tint:"rgba(120,185,120,.18)" }
+];
+function bgById(id){ for (var i=0;i<BGS.length;i++) if (BGS[i].id===id) return BGS[i]; return BGS[0]; }
+
+/* ================= 文案 ================= */
+var STR = {
+  zh: { back:"返回", settings:"设置",
+    speed:"速度", speedLeisure:"悠闲", speedModerate:"适中", speedLively:"活泼", speedFast:"飞快",
+    density:"泡泡量", densityFewer:"少一点", densityNormal:"适中", densityMore:"多一点",
+    cntLess:"少", cntFewer:"较少", cntMid:"适中", cntMore:"较多", cntMost:"多",
+    refillVSlow:"很慢", refillVFast:"很快",
+    surfRipple:"表面波纹", heartbeat:"泡泡心跳", yawn:"打哈欠", halo:"柔光光晕", gshadow:"地面影子", orbit:"轨道小星", rainbowEdge:"彩虹泡边", blow:"吹小泡泡",
+    breeze:"微风事件", shy:"害羞泡泡", chain:"同色连锁",
+    playGroup:"玩法", dynGroup:"动态效果", refillNote:"越小补得越快", previewHint:"点一下任意处结束演示",
+    size:"泡泡大小", sizeSmall:"小巧", sizeNormal:"适中", sizeBig:"大个", sizeHuge:"特大", sizeGiant:"巨大",
+    bubbleSet:"泡泡设置", soundSet:"声音与反馈", breathe:"呼吸膨胀", deform:"泡泡形变", sparkleFx:"闪闪发光", hueFlow:"色彩流转", collOn:"碰撞开", collOff:"碰撞关",
+    theme:"图案主题", bg:"背景", fx:"特效", fxRich:"丰富", fxSimple:"简约", fxOff:"关",
+    collide:"泡泡碰撞", fxAmt:"特效量", fxList:"特效开关",
+    refill:"补给速度", refillFast:"快", refillNormal:"适中", refillSlow:"慢",
+    rainFreq:"泡泡雨", rainOff:"关", rainSometimes:"偶尔", rainOften:"经常",
+    colorful:"彩色泡泡", speedWobble:"速度变化", praiseT:"夸奖", music:"轻音乐", vibrate:"震动", fxOpen:"已开",
+    tabBubbles:"泡泡", tabFx:"特效", tabVisual:"画面", tabSound:"声音",
+    panic:"慌张反应", trail:"泡泡拖尾", slowSpin:"慢旋转", squash:"碰撞挤压",
+    fxConfetti:"撒花", fxStars:"星星", fxHearts:"爱心", fxPetals:"花瓣", fxRibbons:"彩带", fxGlow:"柔光涟漪", fxSurprise:"惊喜泡泡",
+    fxNotes:"音符", fxFireworks:"小烟花", fxButterfly:"蝴蝶", fxSnow:"雪花", fxFeather:"羽毛", fxCandy:"糖果", fxBloom:"花朵绽放", fxMinibub:"迷你泡泡圈", fxRainbowArc:"小彩虹弧", fxSplash:"水花四溅", fxGlitter:"金色闪粉", fxBalloon:"小气球",
+    fxStardust:"螺旋星尘", fxRaindrops:"彩虹雨滴", fxMoonstars:"月亮星星", fxPlane:"纸飞机", fxPinwheel:"风车旋转", fxWreath:"花朵花环", fxSmoke:"彩色烟雾", fxDrizzle:"云朵细雨",
+    sound:"音效", on:"开", off:"关", language:"语言", done:"好了，去玩吧",
+    random:"🎲 随机", bannerTheme:"这一片是",
+    praise:["好棒！","哇！","太厉害啦！","好开心！","砰砰砰！","真好玩！"] },
+  en: { back:"Back", settings:"Settings",
+    speed:"Speed", speedLeisure:"Gentle", speedModerate:"Moderate", speedLively:"Lively", speedFast:"Fast",
+    density:"Bubble count", densityFewer:"Fewer", densityNormal:"Normal", densityMore:"More",
+    cntLess:"Fewest", cntFewer:"Fewer", cntMid:"Normal", cntMore:"More", cntMost:"Most",
+    refillVSlow:"Very slow", refillVFast:"Very fast",
+    surfRipple:"Surface ripple", heartbeat:"Heartbeat", yawn:"Yawn", halo:"Soft halo", gshadow:"Ground shadow", orbit:"Orbit star", rainbowEdge:"Rainbow edge", blow:"Blows bubbles",
+    breeze:"Breeze", shy:"Shy bubbles", chain:"Color chain",
+    playGroup:"Play", dynGroup:"Living effects", refillNote:"Lower = faster", previewHint:"Tap anywhere to end the preview",
+    size:"Bubble size", sizeSmall:"Small", sizeNormal:"Medium", sizeBig:"Big", sizeHuge:"Huge", sizeGiant:"Giant",
+    bubbleSet:"Bubbles", soundSet:"Sound & feedback", breathe:"Breathing", deform:"Squish", sparkleFx:"Sparkle", hueFlow:"Color flow", collOn:"Bump on", collOff:"Bump off",
+    theme:"Pictures", bg:"Background", fx:"Effects", fxRich:"Lots", fxSimple:"A few", fxOff:"Off",
+    collide:"Bump & bounce", fxAmt:"FX amount", fxList:"FX switches",
+    refill:"Refill speed", refillFast:"Fast", refillNormal:"Normal", refillSlow:"Slow",
+    rainFreq:"Bubble rain", rainOff:"Off", rainSometimes:"Sometimes", rainOften:"Often",
+    colorful:"Colorful", speedWobble:"Speed drift", praiseT:"Praise", music:"Soft music", vibrate:"Vibrate", fxOpen:"on",
+    tabBubbles:"Bubbles", tabFx:"Effects", tabVisual:"Look", tabSound:"Sound",
+    panic:"Panic reaction", trail:"Bubble trails", slowSpin:"Slow spin", squash:"Squash on bump",
+    fxConfetti:"Confetti", fxStars:"Stars", fxHearts:"Hearts", fxPetals:"Petals", fxRibbons:"Ribbons", fxGlow:"Glow ripple", fxSurprise:"Surprise",
+    fxNotes:"Notes", fxFireworks:"Fireworks", fxButterfly:"Butterfly", fxSnow:"Snowflakes", fxFeather:"Feathers", fxCandy:"Candy", fxBloom:"Blooms", fxMinibub:"Mini bubbles", fxRainbowArc:"Rainbow arc", fxSplash:"Splash", fxGlitter:"Gold glitter", fxBalloon:"Balloons",
+    fxStardust:"Spiral stardust", fxRaindrops:"Rainbow rain", fxMoonstars:"Moon & stars", fxPlane:"Paper plane", fxPinwheel:"Pinwheel", fxWreath:"Flower wreath", fxSmoke:"Color smoke", fxDrizzle:"Cloud drizzle",
+    sound:"Sound", on:"On", off:"Off", language:"Language", done:"Done, let's play",
+    random:"🎲 Random", bannerTheme:"Now playing:",
+    praise:["Great!","Wow!","Yay!","Amazing!","Pop pop pop!","So fun!"] }
+};
+
+/* ================= 声音：五声音阶八音盒（WebAudio 合成，离线） ================= */
+var AudioBox = (function(){
+  var ctx=null, master=null, enabled=true;
+  var PENTA=[0,2,4,7,9,12,14,16,19,21,24]; /* 宫调五声，两个多八度 */
+  function ac(){
+    if(!ctx){
+      var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+      ctx=new AC(); master=ctx.createGain(); master.gain.value=0.16; master.connect(ctx.destination);
+    }
+    if(ctx.state==="suspended") ctx.resume();
+    return ctx;
+  }
+  function tone(freq,delay,dur,vol){
+    if(!enabled) return;
+    var c=ac(); if(!c) return;
+    var t0=c.currentTime+(delay||0);
+    var o=c.createOscillator(), o2=c.createOscillator(), g=c.createGain(), g2=c.createGain();
+    o.type="sine"; o.frequency.value=freq;
+    o2.type="triangle"; o2.frequency.value=freq*2; g2.gain.value=0.22;
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(vol||0.9,t0+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.start(t0); o2.start(t0); o.stop(t0+dur+0.05); o2.stop(t0+dur+0.05);
+  }
+  /* 轻音乐：八音盒慢速摇篮曲循环（小星星旋律，0 表示休止） */
+  var musicOn=false, musicTimer=null, musicNext=0, musicIdx=0;
+  var MELODY=[262,262,392,392,440,440,392,0,349,349,330,330,294,294,262,0,392,392,349,349,330,330,294,0,392,392,349,349,330,330,294,0,262,262,392,392,440,440,392,0,349,349,330,330,294,294,262,0];
+  function mtone(freq,when){
+    var c=ac(); if(!c) return;
+    var o=c.createOscillator(), o2=c.createOscillator(), g=c.createGain(), g2=c.createGain();
+    o.type="sine"; o.frequency.value=freq;
+    o2.type="triangle"; o2.frequency.value=freq*2; g2.gain.value=0.18;
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.0001,when);
+    g.gain.exponentialRampToValueAtTime(0.30,when+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,when+1.5);
+    o.start(when); o2.start(when); o.stop(when+1.6); o2.stop(when+1.6);
+  }
+  function musicTick(){
+    if(!musicOn) return;
+    var c=ac(); if(!c) return;
+    if(!musicNext || musicNext<c.currentTime) musicNext=c.currentTime+0.1;
+    while(musicNext<c.currentTime+0.9){
+      var f=MELODY[musicIdx%MELODY.length]; musicIdx++;
+      if(f) mtone(f,musicNext);
+      musicNext+=0.52;
+      if(musicIdx%MELODY.length===0) musicNext+=1.8; /* 每遍之间歇一会儿 */
+    }
+  }
+  function musicStart(){
+    if(musicTimer) return;
+    musicTimer=setInterval(musicTick,300); musicTick();
+  }
+  return {
+    setEnabled:function(v){ enabled=!!v; },
+    setMusic:function(v){
+      musicOn=!!v;
+      if(musicOn){ ac(); musicStart(); }
+      else if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
+    },
+    unlock:function(){ ac(); if(musicOn) musicStart(); },
+    /* 点破音：五声音阶随机一音，像弹琴；大泡泡低音、小泡泡高音 */
+    popNote:function(sizeClass){
+      var idx=Math.floor(Math.random()*PENTA.length);
+      var base=392; /* G4 */
+      var f=base*Math.pow(2,PENTA[idx]/12);
+      if(sizeClass==="L") f*=0.79; else if(sizeClass==="S") f*=1.26;
+      tone(f,0,0.65,0.85);
+      tone(f*2,0.03,0.3,0.22);
+    },
+    tinyPop:function(){ tone(1568,0,0.3,0.4); tone(2093,0.04,0.3,0.25); },
+    surprise:function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,i*0.09,0.7,0.8); }); },
+    cheer:function(){ [523,587,659,784,880].forEach(function(f,i){ tone(f,i*0.14,0.8,0.75); }); }
+  };
+})();
+
+/* ================= 设置（本游戏独立键；旧模式/目标数键已废弃） ================= */
+var SKEY="pao-pao-shu-shu-v8";
+var FX_TOGGLE_DEFAULTS={ confetti:true, stars:true, hearts:true, petals:true, ribbons:true, glow:true, surprise:true,
+  notes:true, fireworks:true, butterfly:true, snow:true, feather:true, candy:true, bloom:true,
+  minibub:true, rainbowArc:true, splash:true, glitter:true, balloon:true,
+  stardust:true, raindrops:true, moonstars:true, plane:true, pinwheel:true, wreath:true, smoke:true, drizzle:true };
+var settings={ speedMult:1.0, countMult:1.0, sizeMult:1.0, theme:"random", bg:"sky", fx:"rich", sound:true, lang:"zh",
+  collide:false, refillMult:1.0, colorful:true, speedWobble:true, rainFreq:"sometimes",
+  praise:true, music:false, vibrate:false,
+  breathe:true, deform:true, sparkle:true, hueFlow:true,
+  panic:true, trail:true, slowSpin:true, squash:true,
+  surfRipple:true, heartbeat:true, yawn:true, halo:true, gshadow:true, orbit:true, rainbowEdge:true, blow:true,
+  breeze:true, shy:true, chain:true,
+  fxToggles:JSON.parse(JSON.stringify(FX_TOGGLE_DEFAULTS)) };
+try{
+  var saved=JSON.parse(localStorage.getItem(SKEY)||"null");
+  var legacySize=false;
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v7")||"null"); } /* 迁移 v7：档位值按下表映射成连续值 */
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v6")||"null"); } /* 迁移 v6 全部已有选择，新开关默认开 */
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v5")||"null"); } /* 再往前迁移 v5 */
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v4")||"null"); if(saved) legacySize=true; } /* 迁移 v4 已有选择 */
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v3")||"null"); if(saved) legacySize=true; } /* 再往前迁移 v3 */
+  if(!saved){ saved=JSON.parse(localStorage.getItem("pao-pao-shu-shu-v2")||"null"); if(saved) legacySize=true; } /* 再往前迁移 v2 */
+  if(saved){
+    for(var k in settings){
+      if(saved[k]==null) continue;
+      if(k==="fxToggles"){ for(var fk in settings.fxToggles) if(saved.fxToggles && saved.fxToggles[fk]!=null) settings.fxToggles[fk]=saved.fxToggles[fk]; }
+      else settings[k]=saved[k];
+    }
+    /* v7 及更早的档位值 → v8 连续值映射（仅当存档里还没有连续值时）：
+       速度四档→0.5/1.0/1.6/2.4；泡泡量五档→0.55/0.8/1.0/1.2/1.45；
+       补给五档→1.8/1.35/1.0/0.7/0.45；大小五档→0.8/1.0/1.2/1.45/1.7 */
+    if(saved.speedMult==null){
+      var spdMap={ leisure:0.5, moderate:1.0, lively:1.6, fast:2.4 };
+      if(typeof saved.speed==="string" && spdMap[saved.speed]!=null) settings.speedMult=spdMap[saved.speed];
+    }
+    if(saved.countMult==null){
+      var cntMap=[0.55,0.8,1.0,1.2,1.45];
+      if(typeof saved.densityIdx==="number" && cntMap[saved.densityIdx]!=null) settings.countMult=cntMap[saved.densityIdx];
+      else if(typeof saved.density==="string") settings.countMult = saved.density==="fewer" ? 0.8 : saved.density==="more" ? 1.2 : 1.0;
+    }
+    if(saved.refillMult==null){
+      var refMap=[1.8,1.35,1.0,0.7,0.45];
+      if(typeof saved.refillIdx==="number" && refMap[saved.refillIdx]!=null) settings.refillMult=refMap[saved.refillIdx];
+      else if(typeof saved.refill==="string") settings.refillMult = saved.refill==="fast" ? 0.7 : saved.refill==="slow" ? 1.35 : 1.0;
+    }
+    if(saved.sizeMult==null && typeof saved.size==="string"){
+      var szStr=saved.size;
+      /* v2–v4 大小只有大/特大两档（约等于现适中/大个），先对齐再映射 */
+      if(legacySize){ if(szStr==="big") szStr="normal"; else if(szStr==="huge") szStr="big"; }
+      var szMap={ small:0.8, normal:1.0, big:1.2, huge:1.45, giant:1.7 };
+      if(szMap[szStr]!=null) settings.sizeMult=szMap[szStr];
+    }
+    /* 连续值统一钳制在各自量程内 */
+    settings.speedMult=Math.min(3.0,Math.max(0.3,+settings.speedMult||1.0));
+    settings.countMult=Math.min(1.6,Math.max(0.4,+settings.countMult||1.0));
+    settings.refillMult=Math.min(2.0,Math.max(0.4,+settings.refillMult||1.0));
+    settings.sizeMult=Math.min(1.8,Math.max(0.7,+settings.sizeMult||1.0));
+  }
+}catch(e){}
+function saveSettings(){
+  try{ var o={}; for(var k in settings) o[k]=settings[k]; localStorage.setItem(SKEY,JSON.stringify(o)); }catch(e){}
+}
+function T(){ return STR[settings.lang]||STR.zh; }
+
+/* ================= DOM ================= */
+function $(id){ return document.getElementById(id); }
+var app=$("app"), play=$("play"), scene=$("scene"), fxLayer=$("fxLayer"),
+    banner=$("banner"), praiseEl=$("praise");
+
+/* ================= 背景与场景 ================= */
+var curBg=null;
+function applyBg(id){
+  var b=bgById(id); curBg=b;
+  app.style.background=b.css;
+  document.querySelectorAll(".overlay").forEach(function(o){ o.style.background=b.css; });
+  scene.innerHTML="";
+  if(b.deco==="hills"){
+    scene.innerHTML='<svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 22 Q 22 10 45 19 T 100 16 V34 H0 Z" fill="'+b.tint+'"/><path d="M0 28 Q 30 19 58 25 T 100 24 V34 H0 Z" fill="'+b.tint+'"/></svg>';
+  } else if(b.deco==="waves"){
+    scene.innerHTML='<svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 Q 12 15 25 20 T 50 20 T 75 20 T 100 20 V34 H0 Z" fill="'+b.tint+'"/><path d="M0 27 Q 12 22 25 27 T 50 27 T 75 27 T 100 27 V34 H0 Z" fill="'+b.tint+'"/></svg>';
+  }
+  if(b.deco==="clouds"||b.deco==="hills"){
+    [[8,6,90,26],[58,11,70,20],[78,4,56,17],[30,15,52,15]].forEach(function(c){
+      var d=document.createElement("div"); d.className="cloud";
+      d.style.left=c[0]+"%"; d.style.top=c[1]+"%"; d.style.width=c[2]+"px"; d.style.height=c[3]+"px";
+      scene.appendChild(d);
+    });
+  }
+}
+function resolveBg(){
+  if(settings.bg==="random") return BGS[Math.floor(Math.random()*BGS.length)].id;
+  return settings.bg;
+}
+
+/* ================= 速度 / 数量 ================= */
+/* 速度改连续倍率（0.3–3.0）：以原「适中」档为 1.0 基准，漂移速度线性缩放、生成间隔按幂律缩放，
+   曲线在旧四档锚点（0.5/1.0/1.6/2.4）附近与原档位手感基本一致 */
+function speedCfg(){
+  var m=settings.speedMult||1.0;
+  return { drift:38*m, vary:7+7*m, spawn:1250*Math.pow(m,-0.7) };
+}
+/* 同屏上限：按视口面积动态算，再按尺寸倍率重算（泡泡越大同屏越少、防挤），泡泡量倍率（0.4–1.6）在上限内调整 */
+function targetCount(){
+  var W=window.innerWidth, H=window.innerHeight;
+  var f=settings.sizeMult||1.0;
+  var base=Math.floor(W*H/29000/f);
+  base=Math.max(5, Math.min(14, base));
+  var df=settings.countMult||1.0; /* 泡泡量连续倍率，仍受同屏上限封顶 */
+  var n=Math.round(base*df);
+  return Math.max(4, Math.min(14, n));
+}
+/* 泡泡尺寸：尺寸倍率（0.7–1.8）整体缩放三档基础尺寸（84/108/138）的分布；最小泡不低于约 68px，封顶不超过屏宽 55% */
+function pickSize(){
+  var f=settings.sizeMult||1.0;
+  var r=Math.random();
+  var cls = r<0.34 ? "S" : r<0.72 ? "M" : "L";
+  var base = cls==="S" ? 84 : cls==="M" ? 108 : 138;
+  var px=Math.max(68, Math.round(base*f));
+  var cap=Math.floor(window.innerWidth*0.55);
+  return { cls:cls, px:Math.min(px, cap) };
+}
+
+/* ================= 特效（全部慢速柔和） ================= */
+var FXC=["#f6c6d3","#f9e29c","#c4e6cd","#bfe0f2","#ddd0ee","#ffd9a8"];
+function fxLevel(){ return settings.fx; }
+function fxOn(name){ return !settings.fxToggles || settings.fxToggles[name]!==false; }
+function fxCount(base){ if(fxLevel()==="off") return 0; return fxLevel()==="rich" ? base : Math.max(1,Math.round(base*0.55)); }
+var BUBBLE_COLORS=["pink","blue","green","yellow","purple","orange"];
+function fxEl(cls,txt,sz,x,y){
+  var d=document.createElement("div"); d.className=cls;
+  if(txt) d.textContent=txt;
+  if(sz) d.style.fontSize=sz+"px";
+  d.style.left=x+"px"; d.style.top=y+"px";
+  fxLayer.appendChild(d); return d;
+}
+function fxAnim(d,frames,dur){
+  d.animate(frames,{ duration:dur, easing:"ease-out" }).onfinish=function(){ d.remove(); };
+}
+/* 粉 → 爱心粒子飘出 */
+function spawnHeartsAt(cx,cy){
+  var n=fxCount(7); if(!n) return;
+  var em=["💗","❤️","💕","🩷"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 17+Math.random()*13, cx-14+(Math.random()*28), cy-14+(Math.random()*20));
+    var dx=(Math.random()*90-45), up=-(70+Math.random()*55);
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.6)", opacity:0 },
+      { transform:"translate("+(dx*0.4)+"px,"+(up*0.4)+"px) scale(1.05)", opacity:1, offset:0.28 },
+      { transform:"translate("+dx+"px,"+up+"px) scale(1)", opacity:0 }
+    ], 1700+Math.random()*700);
+  }
+}
+/* 蓝 → 星星粒子 */
+function spawnStarsAt(cx,cy){
+  var n=fxCount(8); if(!n) return;
+  var em=["⭐","✨","🌟"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 15+Math.random()*12, cx-10, cy-10);
+    var ang=(Math.PI*2*i)/n + Math.random()*0.5;
+    var dist=55+Math.random()*50;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist-24;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.5) rotate(0deg)", opacity:0 },
+      { transform:"translate("+(dx*0.55)+"px,"+(dy*0.55)+"px) scale(1.1) rotate(80deg)", opacity:1, offset:0.35 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(.9) rotate(160deg)", opacity:0 }
+    ], 1500+Math.random()*500);
+  }
+}
+/* 绿 → 花瓣/叶子缓落 */
+function spawnPetalsAt(cx,cy){
+  var n=fxCount(7); if(!n) return;
+  var em=["🌸","🍃","🌿","💮"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 16+Math.random()*12, cx-30+(Math.random()*60), cy-36);
+    var sway=(Math.random()*36-18), fall=110+Math.random()*50, rot=(Math.random()*180-90);
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(0deg)", opacity:0 },
+      { transform:"translate("+sway+"px,"+(fall*0.45)+"px) rotate("+(rot*0.5)+"deg)", opacity:1, offset:0.3 },
+      { transform:"translate("+(-sway)+"px,"+fall+"px) rotate("+rot+"deg)", opacity:0 }
+    ], 2600+Math.random()*800);
+  }
+}
+/* 黄 → 撒花纸屑 */
+function spawnConfettiAt(cx,cy){
+  var n=fxCount(12); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("confetti","",0,cx,cy);
+    var sz=7+Math.random()*8;
+    d.style.width=sz+"px"; d.style.height=(sz*0.62)+"px";
+    d.style.background=FXC[i%FXC.length];
+    var dx=(Math.random()*130-65), rot=(Math.random()*320-160);
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(0deg)", opacity:1 },
+      { transform:"translate("+(dx*0.7)+"px,-58px) rotate("+(rot*0.6)+"deg)", opacity:1, offset:0.35 },
+      { transform:"translate("+dx+"px,112px) rotate("+rot+"deg)", opacity:0 }
+    ], 2100+Math.random()*500);
+  }
+}
+/* 紫 → 彩带螺旋 */
+function spawnRibbonsAt(cx,cy){
+  var n=fxCount(6); if(!n) return;
+  var cols=["#b79ce0","#d3b8ec","#9f83d6","#e5a3c8"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-ribbon","",0,cx,cy);
+    d.style.width=(28+Math.random()*16)+"px"; d.style.height="6px";
+    d.style.background=cols[i%cols.length];
+    var a=Math.random()*Math.PI*2, frames=[];
+    for(var st=0; st<=4; st++){
+      var ang=a+st*1.15, r=st*21;
+      frames.push({ transform:"translate("+(Math.cos(ang)*r)+"px,"+(Math.sin(ang)*r)+"px) rotate("+Math.round(ang*57+st*40)+"deg)", opacity: st===4?0:0.95 });
+    }
+    fxAnim(d, frames, 1800+Math.random()*400);
+  }
+}
+/* 橙 → 柔光光点（涟漪在 spawnRipple 里按色出） */
+function spawnGlowDots(cx,cy){
+  var n=fxCount(8); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx,cy);
+    var sz=7+Math.random()*8;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.background="rgba(255,183,92,.85)";
+    d.style.boxShadow="0 0 12px 3px rgba(255,190,100,.55)";
+    var ang=(Math.PI*2*i)/n + Math.random()*0.5;
+    var dist=42+Math.random()*42;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.6)", opacity:0.95 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(1)", opacity:0 }
+    ], 1500+Math.random()*400);
+  }
+}
+/* ===== 新增 12 种点破特效（全部慢速柔和、不挡操作、无频闪） ===== */
+/* 黄族 → 音符飞出：音符向上飘、左右轻摆 */
+function spawnNotesAt(cx,cy){
+  var n=fxCount(6); if(!n) return;
+  var em=["🎵","🎶","🎼"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 17+Math.random()*12, cx-16+(Math.random()*32), cy-12);
+    var sway=(Math.random()*44-22), up=-(95+Math.random()*55);
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(-6deg)", opacity:0 },
+      { transform:"translate("+(sway*0.5)+"px,"+(up*0.45)+"px) rotate(7deg)", opacity:1, offset:0.3 },
+      { transform:"translate("+sway+"px,"+up+"px) rotate(-5deg)", opacity:0 }
+    ], 2000+Math.random()*600);
+  }
+}
+/* 紫族 → 小烟花绽放：彩色小点从中心缓缓绽开再轻轻下落 */
+function spawnFireworksAt(cx,cy){
+  var n=fxCount(14); if(!n) return;
+  var cols=["#f2a0c0","#a8d0f0","#f9e29c","#b5e0c0","#d3b8ec","#ffc9a3"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx,cy);
+    var sz=5+Math.random()*5;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.background=cols[i%cols.length];
+    d.style.boxShadow="0 0 8px 2px "+cols[i%cols.length];
+    var ang=(Math.PI*2*i)/n + Math.random()*0.4;
+    var dist=46+Math.random()*38;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.5)", opacity:0.95 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(1)", opacity:0.9, offset:0.55 },
+      { transform:"translate("+(dx*1.08)+"px,"+(dy+34)+"px) scale(.7)", opacity:0 }
+    ], 1500+Math.random()*400);
+  }
+  var core=fxEl("fx-star","✨",22,cx-11,cy-11);
+  fxAnim(core,[ { transform:"scale(.4)", opacity:0.9 }, { transform:"scale(1.25)", opacity:0 } ],900);
+}
+/* 绿族 → 蝴蝶飞走：一两只蝴蝶扇着翅膀斜飞出画面 */
+function spawnButterfliesAt(cx,cy){
+  var n=fxCount(2); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star","🦋",24+Math.random()*10, cx-14+(i*26-13), cy-14);
+    var dir=i===0?-1:1;
+    var dx=dir*(90+Math.random()*60), up=-(120+Math.random()*60);
+    var frames=[];
+    for(var st=0; st<=6; st++){
+      frames.push({ transform:"translate("+(dx*st/6)+"px,"+(up*st/6 - Math.sin(st*1.4)*10)+"px) scaleX("+(st%2?0.55:1)+")", opacity: st===6?0:1, offset:st/6 });
+    }
+    fxAnim(d, frames, 2500+Math.random()*500);
+  }
+}
+/* 蓝族 → 雪花缓落：雪花慢慢飘下、轻轻摇摆 */
+function spawnSnowAt(cx,cy){
+  var n=fxCount(7); if(!n) return;
+  var em=["❄️","❄️","✻"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 14+Math.random()*10, cx-34+(Math.random()*68), cy-30);
+    if(em[i%em.length]==="✻"){ d.style.color="#a9cfe8"; d.style.textShadow="0 0 6px rgba(170,210,240,.8)"; }
+    var sway=(Math.random()*30-15), fall=120+Math.random()*55;
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(0deg)", opacity:0 },
+      { transform:"translate("+sway+"px,"+(fall*0.5)+"px) rotate(50deg)", opacity:1, offset:0.3 },
+      { transform:"translate("+(-sway)+"px,"+fall+"px) rotate(110deg)", opacity:0 }
+    ], 3000+Math.random()*700);
+  }
+}
+/* 绿族 → 羽毛飘落：羽毛打着旋儿慢慢沉下来 */
+function spawnFeathersAt(cx,cy){
+  var n=fxCount(5); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star","🪶",19+Math.random()*11, cx-28+(Math.random()*56), cy-26);
+    var sway=(Math.random()*46-23), fall=105+Math.random()*45;
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(-14deg)", opacity:0 },
+      { transform:"translate("+sway+"px,"+(fall*0.35)+"px) rotate(16deg)", opacity:1, offset:0.3 },
+      { transform:"translate("+(-sway*0.7)+"px,"+(fall*0.7)+"px) rotate(-12deg)", opacity:1, offset:0.65 },
+      { transform:"translate("+(sway*0.4)+"px,"+fall+"px) rotate(10deg)", opacity:0 }
+    ], 3200+Math.random()*700);
+  }
+}
+/* 粉族 → 糖果蹦跳：糖果弹跳几下再淡去 */
+function spawnCandyAt(cx,cy){
+  var n=fxCount(6); if(!n) return;
+  var em=["🍬","🍭","🍬","🧁"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 16+Math.random()*10, cx-30+(Math.random()*60), cy-8);
+    var dx=(Math.random()*56-28);
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.6)", opacity:0 },
+      { transform:"translate("+(dx*0.4)+"px,-52px) scale(1.05)", opacity:1, offset:0.3 },
+      { transform:"translate("+(dx*0.7)+"px,6px) scale(1)", opacity:1, offset:0.52 },
+      { transform:"translate("+(dx*0.88)+"px,-26px) scale(1)", opacity:1, offset:0.72 },
+      { transform:"translate("+dx+"px,2px) scale(.95)", opacity:0 }
+    ], 1700+Math.random()*400);
+  }
+}
+/* 粉族 → 花朵绽放：一朵大花在原地慢慢开大，旁边两朵小的 */
+function spawnBloomAt(cx,cy){
+  if(fxLevel()==="off") return;
+  var em=["🌸","🌼","🌷","🌺"];
+  var big=fxEl("fx-star", em[Math.floor(Math.random()*em.length)], 44, cx-22, cy-22);
+  fxAnim(big,[
+    { transform:"scale(.25) rotate(-16deg)", opacity:0 },
+    { transform:"scale(1.15) rotate(4deg)", opacity:1, offset:0.45 },
+    { transform:"scale(1.3) rotate(8deg)", opacity:0 }
+  ], 1900);
+  var n=fxCount(2);
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[Math.floor(Math.random()*em.length)], 20+Math.random()*8, cx+(i===0?-40:30), cy+(i===0?-26:18));
+    fxAnim(d,[
+      { transform:"scale(.3) rotate(10deg)", opacity:0 },
+      { transform:"scale(1.05) rotate(-4deg)", opacity:1, offset:0.5 },
+      { transform:"scale(1.15) rotate(0deg)", opacity:0 }
+    ], 1700+Math.random()*300);
+  }
+}
+/* 橙族 → 迷你泡泡圈：一圈小泡泡从中心缓缓扩散 */
+function spawnMinibubAt(cx,cy){
+  var n=fxCount(9); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=document.createElement("div"); d.className="fx-bub";
+    var sz=8+Math.random()*9;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.left=(cx-sz/2)+"px"; d.style.top=(cy-sz/2)+"px";
+    fxLayer.appendChild(d);
+    var ang=(Math.PI*2*i)/n + Math.random()*0.3;
+    var dist=52+Math.random()*26;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist-10;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.5)", opacity:0.95 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(1)", opacity:0 }
+    ], 1600+Math.random()*400);
+  }
+}
+/* 橙族 → 小彩虹弧：点破处升起一道小小的彩虹 */
+function spawnRainbowArcAt(cx,cy){
+  if(fxLevel()==="off") return;
+  var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.setAttribute("viewBox","0 0 120 66");
+  svg.style.cssText="position:absolute;left:"+(cx-60)+"px;top:"+(cy-58)+"px;width:120px;height:66px;pointer-events:none;";
+  var cols=["#f2a0a0","#f7c98a","#f9e29c","#a8d8a0","#9ecfec","#c3aee0"];
+  cols.forEach(function(c,i){
+    var p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    var r=54-i*7;
+    p.setAttribute("d","M "+(60-r)+" 62 A "+r+" "+r+" 0 0 1 "+(60+r)+" 62");
+    p.setAttribute("fill","none"); p.setAttribute("stroke",c); p.setAttribute("stroke-width","6.5"); p.setAttribute("stroke-linecap","round");
+    p.style.opacity="0.8";
+    svg.appendChild(p);
+  });
+  fxLayer.appendChild(svg);
+  svg.animate([
+    { transform:"translateY(8px) scale(.7)", opacity:0 },
+    { transform:"translateY(0) scale(1)", opacity:1, offset:0.3 },
+    { transform:"translateY(-7px) scale(1.04)", opacity:0 }
+  ],{ duration:2300, easing:"ease-out" }).onfinish=function(){ svg.remove(); };
+}
+/* 蓝族 → 水花四溅：小水滴弹起再落下 */
+function spawnSplashAt(cx,cy){
+  var n=fxCount(8); if(!n) return;
+  for(var i=0;i<n;i++){
+    var useEm=Math.random()<0.45;
+    var d;
+    if(useEm){ d=fxEl("fx-star","💧",13+Math.random()*8, cx-8, cy-8); }
+    else{
+      d=fxEl("fx-dot","",0,cx,cy);
+      var sz2=6+Math.random()*6;
+      d.style.width=sz2+"px"; d.style.height=sz2+"px";
+      d.style.background="rgba(130,195,245,.9)";
+      d.style.boxShadow="0 0 8px 2px rgba(140,200,245,.5)";
+    }
+    var dx=(Math.random()*96-48), up=-(52+Math.random()*38);
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.6)", opacity:0.95 },
+      { transform:"translate("+(dx*0.55)+"px,"+up+"px) scale(1)", opacity:1, offset:0.42 },
+      { transform:"translate("+dx+"px,44px) scale(.85)", opacity:0 }
+    ], 1400+Math.random()*350);
+  }
+}
+/* 黄族 → 金色闪粉：金色小点闪烁着缓缓飘落 */
+function spawnGlitterAt(cx,cy){
+  var n=fxCount(13); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx+(Math.random()*54-27),cy+(Math.random()*30-15));
+    var sz=3.5+Math.random()*4;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.background="#f7cf6b";
+    d.style.boxShadow="0 0 7px 2px rgba(247,207,107,.75)";
+    var dx=(Math.random()*44-22), fall=52+Math.random()*42;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.4)", opacity:0 },
+      { transform:"translate("+(dx*0.4)+"px,"+(fall*0.35)+"px) scale(1.15)", opacity:1, offset:0.3 },
+      { transform:"translate("+(dx*0.7)+"px,"+(fall*0.65)+"px) scale(.5)", opacity:0.35, offset:0.6 },
+      { transform:"translate("+dx+"px,"+fall+"px) scale(1)", opacity:0 }
+    ], 2100+Math.random()*600);
+  }
+}
+/* 紫族 → 小气球升起：气球慢慢飘向天空 */
+function spawnBalloonsAt(cx,cy){
+  var n=fxCount(2); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star","🎈",26+Math.random()*10, cx-15+(i*30-15), cy-16);
+    var sway=(Math.random()*36-18), up=-(170+Math.random()*70);
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(-4deg) scale(.7)", opacity:0 },
+      { transform:"translate("+(sway*0.4)+"px,"+(up*0.4)+"px) rotate(4deg) scale(1)", opacity:1, offset:0.3 },
+      { transform:"translate("+sway+"px,"+up+"px) rotate(-3deg) scale(1)", opacity:0 }
+    ], 2900+Math.random()*500);
+  }
+}
+/* ===== 再新增 8 种点破特效（全部慢速柔和） ===== */
+/* 紫族 → 螺旋星尘：小星点沿螺旋缓缓旋出 */
+function spawnStardustAt(cx,cy){
+  var n=fxCount(12); if(!n) return;
+  var cols=["#c9aef0","#e5c8f5","#a98fd8","#f2d8f7"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx,cy);
+    var sz=4+Math.random()*4.5;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    var c=cols[i%cols.length];
+    d.style.background=c; d.style.boxShadow="0 0 7px 2px "+c;
+    var a0=(i/n)*Math.PI*2, frames=[];
+    for(var st=0; st<=4; st++){
+      var ang=a0+st*0.85, r=st*15;
+      frames.push({ transform:"translate("+(Math.cos(ang)*r)+"px,"+(Math.sin(ang)*r-st*4)+"px) scale("+(1-st*0.14)+")", opacity: st===4?0:0.95, offset:st/4 });
+    }
+    fxAnim(d,frames,1900+Math.random()*400);
+  }
+}
+/* 橙族 → 彩虹雨滴：彩色小水滴从点破处缓缓落下 */
+function spawnRaindropsAt(cx,cy){
+  var n=fxCount(9); if(!n) return;
+  var cols=["#f2a0a0","#f7c98a","#a8d8a0","#9ecfec","#c3aee0"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx+(Math.random()*56-28),cy-14);
+    var sz=5+Math.random()*4;
+    d.style.width=sz+"px"; d.style.height=(sz*1.5)+"px";
+    d.style.borderRadius="50% 50% 50% 50% / 60% 60% 40% 40%";
+    var c=cols[i%cols.length];
+    d.style.background=c; d.style.boxShadow="0 0 6px 1px "+c;
+    var fall=95+Math.random()*45, sway=(Math.random()*20-10);
+    fxAnim(d,[
+      { transform:"translate(0,0)", opacity:0 },
+      { transform:"translate("+(sway*0.4)+"px,"+(fall*0.4)+"px)", opacity:0.95, offset:0.3 },
+      { transform:"translate("+sway+"px,"+fall+"px)", opacity:0 }
+    ], 2100+Math.random()*500);
+  }
+}
+/* 蓝族 → 月亮星星：小月亮带着星星缓缓升起 */
+function spawnMoonstarsAt(cx,cy){
+  if(fxLevel()==="off") return;
+  var moon=fxEl("fx-star","🌙",30,cx-15,cy-15);
+  fxAnim(moon,[
+    { transform:"translate(0,0) scale(.5) rotate(-10deg)", opacity:0 },
+    { transform:"translate(3px,-46px) scale(1.05) rotate(4deg)", opacity:1, offset:0.4 },
+    { transform:"translate(6px,-92px) scale(1) rotate(8deg)", opacity:0 }
+  ],2400);
+  var n=fxCount(5); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", i%2?"⭐":"✨", 13+Math.random()*8, cx-26+(Math.random()*52), cy-6+(Math.random()*20));
+    var up=-(70+Math.random()*50), dx=(Math.random()*36-18);
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.5)", opacity:0 },
+      { transform:"translate("+(dx*0.5)+"px,"+(up*0.5)+"px) scale(1.05)", opacity:1, offset:0.35 },
+      { transform:"translate("+dx+"px,"+up+"px) scale(.9)", opacity:0 }
+    ], 2200+Math.random()*500);
+  }
+}
+/* 绿族 → 纸飞机飞走：一架小纸飞机盘旋着飞远 */
+function spawnPlaneAt(cx,cy){
+  if(fxLevel()==="off") return;
+  var d=document.createElement("div"); d.className="fx-star";
+  d.innerHTML='<svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 L15 22 L11 13 L2 9 Z" fill="#cdeac0" stroke="#7fb069" stroke-width="1.4" stroke-linejoin="round"/><path d="M22 2 L11 13" stroke="#7fb069" stroke-width="1.4" fill="none"/></svg>';
+  d.style.left=(cx-17)+"px"; d.style.top=(cy-17)+"px";
+  fxLayer.appendChild(d);
+  var dir=Math.random()<0.5?-1:1, frames=[];
+  for(var st=0; st<=6; st++){
+    frames.push({ transform:"translate("+(dir*st*26)+"px,"+(-st*15-Math.sin(st*1.1)*13)+"px) rotate("+(dir*st*5)+"deg) scale("+(1-st*0.07)+")", opacity: st===6?0:1, offset:st/6 });
+  }
+  fxAnim(d,frames,2600);
+}
+/* 黄族 → 风车旋转：小风车转着圈缓缓升起 */
+function spawnPinwheelAt(cx,cy){
+  var n=fxCount(2); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=document.createElement("div"); d.className="fx-dot";
+    var sz=24+Math.random()*8;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.left=(cx-sz/2+(i*30-15))+"px"; d.style.top=(cy-sz/2)+"px";
+    d.style.background="conic-gradient(#f2a0a0 0 25%, #f9e29c 0 50%, #a8d8a0 0 75%, #9ecfec 0 100%)";
+    d.style.borderRadius="50%";
+    d.style.boxShadow="0 0 8px rgba(255,255,255,.6)";
+    fxLayer.appendChild(d);
+    var sway=(Math.random()*30-15), up=-(110+Math.random()*40);
+    fxAnim(d,[
+      { transform:"translate(0,0) rotate(0deg) scale(.6)", opacity:0 },
+      { transform:"translate("+(sway*0.5)+"px,"+(up*0.5)+"px) rotate(300deg) scale(1)", opacity:1, offset:0.35 },
+      { transform:"translate("+sway+"px,"+up+"px) rotate(640deg) scale(1)", opacity:0 }
+    ], 2400+Math.random()*400);
+  }
+}
+/* 粉族 → 花朵花环：一圈小花在点破处缓缓张开成环 */
+function spawnWreathAt(cx,cy){
+  var n=fxCount(8); if(!n) return;
+  var em=["🌸","🌼","🌷","💮"];
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-star", em[i%em.length], 15+Math.random()*7, cx-10, cy-10);
+    var ang=(Math.PI*2*i)/n, r=44+Math.random()*8;
+    var dx=Math.cos(ang)*r, dy=Math.sin(ang)*r;
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.3) rotate(0deg)", opacity:0 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(1.05) rotate(30deg)", opacity:1, offset:0.45 },
+      { transform:"translate("+(dx*1.12)+"px,"+(dy*1.12)+"px) scale(1) rotate(45deg)", opacity:0 }
+    ], 2100+Math.random()*400);
+  }
+}
+/* 橙族 → 彩色烟雾：几团柔和彩烟缓缓膨开消散 */
+function spawnSmokeAt(cx,cy){
+  var n=fxCount(5); if(!n) return;
+  var cols=["rgba(250,180,105,.5)","rgba(242,160,160,.45)","rgba(195,174,224,.45)","rgba(158,207,236,.45)"];
+  for(var i=0;i<n;i++){
+    var sz=26+Math.random()*22;
+    var d=fxEl("fx-dot","",0,cx-sz/2+(Math.random()*44-22),cy-sz/2+(Math.random()*30-15));
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.background="radial-gradient(circle, "+cols[i%cols.length]+" 0%, rgba(255,255,255,0) 70%)";
+    d.style.filter="blur(2px)";
+    var dx=(Math.random()*40-20), up=-(26+Math.random()*24);
+    fxAnim(d,[
+      { transform:"translate(0,0) scale(.5)", opacity:0 },
+      { transform:"translate("+(dx*0.5)+"px,"+(up*0.5)+"px) scale(1.15)", opacity:0.9, offset:0.4 },
+      { transform:"translate("+dx+"px,"+up+"px) scale(1.7)", opacity:0 }
+    ], 2300+Math.random()*500);
+  }
+}
+/* 蓝族 → 云朵细雨：一朵小云浮现，落下细细的雨丝 */
+function spawnDrizzleAt(cx,cy){
+  if(fxLevel()==="off") return;
+  var cloud=fxEl("fx-star","☁️",34,cx-17,cy-44);
+  fxAnim(cloud,[
+    { transform:"translate(0,4px) scale(.6)", opacity:0 },
+    { transform:"translate(0,0) scale(1)", opacity:1, offset:0.25 },
+    { transform:"translate(2px,-4px) scale(1.02)", opacity:1, offset:0.7 },
+    { transform:"translate(3px,-8px) scale(1)", opacity:0 }
+  ],2300);
+  var n=fxCount(7); if(!n) return;
+  for(var i=0;i<n;i++){
+    var d=fxEl("fx-dot","",0,cx-20+(Math.random()*40),cy-16);
+    var sz=3.5+Math.random()*2.5;
+    d.style.width=sz+"px"; d.style.height=(sz*2.1)+"px";
+    d.style.background="rgba(130,195,245,.85)";
+    var fall=64+Math.random()*30;
+    fxAnim(d,[
+      { transform:"translate(0,0)", opacity:0 },
+      { transform:"translate(-2px,"+(fall*0.5)+"px)", opacity:0.9, offset:0.35 },
+      { transform:"translate(-4px,"+fall+"px)", opacity:0 }
+    ], 1500+Math.random()*400);
+  }
+}
+/* 颜色 → 特效族：每色一族随机出；族内全关时不出额外特效（只剩基础图案跳舞+涟漪） */
+var FX_SPAWN={ confetti:spawnConfettiAt, stars:spawnStarsAt, hearts:spawnHeartsAt, petals:spawnPetalsAt, ribbons:spawnRibbonsAt, glow:spawnGlowDots,
+  notes:spawnNotesAt, fireworks:spawnFireworksAt, butterfly:spawnButterfliesAt, snow:spawnSnowAt, feather:spawnFeathersAt, candy:spawnCandyAt,
+  bloom:spawnBloomAt, minibub:spawnMinibubAt, rainbowArc:spawnRainbowArcAt, splash:spawnSplashAt, glitter:spawnGlitterAt, balloon:spawnBalloonsAt,
+  stardust:spawnStardustAt, raindrops:spawnRaindropsAt, moonstars:spawnMoonstarsAt, plane:spawnPlaneAt, pinwheel:spawnPinwheelAt, wreath:spawnWreathAt, smoke:spawnSmokeAt, drizzle:spawnDrizzleAt };
+var FX_FAMILY={ pink:["hearts","bloom","candy","wreath"], blue:["stars","snow","splash","moonstars","drizzle"], green:["petals","butterfly","feather","plane"],
+  yellow:["confetti","glitter","notes","pinwheel"], purple:["ribbons","fireworks","balloon","stardust"], orange:["glow","rainbowArc","minibub","raindrops","smoke"] };
+var FX_ALL_POP=["confetti","stars","hearts","petals","ribbons","glow","notes","fireworks","butterfly","snow","feather","candy","bloom","minibub","rainbowArc","splash","glitter","balloon","stardust","raindrops","moonstars","plane","pinwheel","wreath","smoke","drizzle"];
+function spawnFamilyFx(color,cx,cy){
+  if(fxLevel()==="off") return;
+  var fam=FX_FAMILY[color]||[];
+  var avail=fam.filter(function(k){ return fxOn(k); });
+  if(!avail.length) return;
+  FX_SPAWN[avail[Math.floor(Math.random()*avail.length)]](cx,cy);
+}
+function spawnRandomFx(cx,cy){ /* 彩色关时：从全部已开启的点破特效里随机出一种 */
+  if(fxLevel()==="off") return;
+  var avail=FX_ALL_POP.filter(function(k){ return fxOn(k); });
+  if(!avail.length) return;
+  FX_SPAWN[avail[Math.floor(Math.random()*avail.length)]](cx,cy);
+}
+function spawnConfetti(n,dur){
+  for(var i=0;i<n;i++){
+    var d=document.createElement("div"); d.className="confetti";
+    var s=7+Math.random()*8;
+    d.style.width=s+"px"; d.style.height=(s*0.62)+"px";
+    d.style.background=FXC[i%FXC.length];
+    d.style.left=(Math.random()*96+2)+"%"; d.style.top="-4%";
+    fxLayer.appendChild(d);
+    var drift=(Math.random()*90-45), rot=(Math.random()*300-150);
+    d.animate([
+      { transform:"translate(0,0) rotate(0deg)", opacity:1 },
+      { transform:"translate("+drift+"px, 108vh) rotate("+rot+"deg)", opacity:0.85 }
+    ],{ duration:dur*(0.85+Math.random()*0.4), easing:"cubic-bezier(.3,.4,.6,1)" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+}
+function spawnRising(kind,n,dur){
+  for(var i=0;i<n;i++){
+    var d=document.createElement("div");
+    var sz=kind==="star"?(20+Math.random()*18):(16+Math.random()*30);
+    if(kind==="star"){ d.className="fx-star"; d.textContent="⭐"; d.style.fontSize=sz+"px"; }
+    else { d.className="fx-bub"; d.style.width=sz+"px"; d.style.height=sz+"px"; }
+    d.style.left=(Math.random()*94+2)+"%"; d.style.bottom="-8%";
+    fxLayer.appendChild(d);
+    var drift=(Math.random()*70-35);
+    d.animate([
+      { transform:"translate(0,0)", opacity:0 },
+      { transform:"translate("+(drift*0.4)+"px,-30vh)", opacity:0.95, offset:0.25 },
+      { transform:"translate("+drift+"px,-112vh)", opacity:0 }
+    ],{ duration:dur*(0.85+Math.random()*0.4), delay:Math.random()*700, easing:"ease-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+}
+function spawnRainbow(){
+  var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  svg.id="rainbowSvg"; svg.setAttribute("viewBox","0 0 300 160");
+  var cols=["#f2a0a0","#f7c98a","#f9e29c","#a8d8a0","#9ecfec","#c3aee0"];
+  cols.forEach(function(c,i){
+    var p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    var r=140-i*11;
+    p.setAttribute("d","M "+(150-r)+" 155 A "+r+" "+r+" 0 0 1 "+(150+r)+" 155");
+    p.setAttribute("fill","none"); p.setAttribute("stroke",c); p.setAttribute("stroke-width","10"); p.setAttribute("stroke-linecap","round");
+    p.style.opacity="0.75";
+    var len=3.2*r;
+    p.style.strokeDasharray=len; p.style.strokeDashoffset=len;
+    p.animate([{strokeDashoffset:len},{strokeDashoffset:0}],{duration:2400+i*120,easing:"ease-out",fill:"forwards"});
+    svg.appendChild(p);
+  });
+  fxLayer.appendChild(svg);
+  setTimeout(function(){ svg.animate([{opacity:1},{opacity:0}],{duration:900,fill:"forwards"}).onfinish=function(){ svg.remove(); }; },3000);
+}
+function showPraise(){
+  var p=T().praise[Math.floor(Math.random()*T().praise.length)];
+  praiseEl.textContent=p;
+  praiseEl.classList.remove("show"); void praiseEl.offsetWidth; praiseEl.classList.add("show");
+}
+var celebIdx=0;
+function smallCelebrate(){ /* 每约 20 个点破一次，慢速小庆祝，不打断继续点 */
+  if(fxLevel()==="off") return;
+  var rich=fxLevel()==="rich";
+  var kinds=[];
+  if(fxOn("confetti")) kinds.push("confetti");
+  if(fxOn("stars")) kinds.push("stars");
+  kinds.push("rainbow"); kinds.push("bubbles");
+  var kind=kinds[celebIdx%kinds.length]; celebIdx++;
+  if(kind==="confetti") spawnConfetti(rich?22:10,3600);
+  else if(kind==="stars") spawnRising("star",rich?12:6,3800);
+  else if(kind==="rainbow"){ spawnRainbow(); if(rich) spawnRising("star",6,3400); }
+  else spawnRising("bub",rich?12:7,4000);
+  AudioBox.cheer();
+}
+/* ================= 同色连锁：约 6 秒内连破 3 个同色 → 该色全屏小庆祝（约 20 秒冷却） ================= */
+var chainPops=[], chainCooldownUntil=0;
+var CHAIN_HEX={ pink:"#f28bb0", blue:"#6db3e8", green:"#7cc78e", yellow:"#f2c14e", purple:"#b18fe0", orange:"#f79c4e" };
+var CHAIN_EM={ pink:["💗","🌸"], blue:["⭐","💧"], green:["🌸","🍃"], yellow:["⭐","🎊"], purple:["🎀","✨"], orange:["🍊","✨"] };
+function noteChain(b){
+  if(!settings.chain || b.special || !b.color) return;
+  var now=performance.now();
+  chainPops.push({ c:b.color, t:now });
+  while(chainPops.length && now-chainPops[0].t>6000) chainPops.shift();
+  if(now<chainCooldownUntil) return;
+  var cnt=0;
+  for(var i=0;i<chainPops.length;i++) if(chainPops[i].c===b.color) cnt++;
+  if(cnt>=3){ chainCooldownUntil=now+20000; chainPops=[]; colorChainCelebrate(b.color); }
+}
+function colorChainCelebrate(color){
+  if(fxLevel()==="off") return;
+  var hex=CHAIN_HEX[color]||"#f2a65a";
+  var n=fxLevel()==="rich"?26:16, i, d;
+  for(i=0;i<n;i++){ /* 该色粒子慢撒满屏一层 */
+    d=document.createElement("div"); d.className="fx-dot";
+    var sz=5+Math.random()*6;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.background=hex; d.style.boxShadow="0 0 8px 2px "+hex;
+    d.style.left=(Math.random()*96+2)+"%"; d.style.top="-3%";
+    fxLayer.appendChild(d);
+    var drift=(Math.random()*70-35);
+    d.animate([
+      { transform:"translate(0,0)", opacity:0 },
+      { transform:"translate("+(drift*0.3)+"px,30vh)", opacity:0.95, offset:0.3 },
+      { transform:"translate("+drift+"px,106vh)", opacity:0.7 }
+    ],{ duration:3200+Math.random()*900, delay:Math.random()*500, easing:"ease-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+  var ems=CHAIN_EM[color]||["✨"];
+  for(i=0;i<6;i++){
+    d=fxEl("fx-star", ems[i%ems.length], 18+Math.random()*10, Math.random()*Math.max(60,window.innerWidth-70), -12);
+    var drift2=(Math.random()*60-30);
+    d.animate([
+      { transform:"translate(0,0) rotate(0deg)", opacity:0 },
+      { transform:"translate("+(drift2*0.4)+"px,34vh) rotate(40deg)", opacity:1, offset:0.3 },
+      { transform:"translate("+drift2+"px,108vh) rotate(90deg)", opacity:0.8 }
+    ],{ duration:3600+Math.random()*700, delay:Math.random()*450, easing:"ease-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+  AudioBox.cheer();
+}
+var bannerTimer=null;
+function showBanner(text,ms){
+  banner.textContent=text;
+  banner.classList.add("show");
+  clearTimeout(bannerTimer);
+  bannerTimer=setTimeout(function(){ banner.classList.remove("show"); },ms||2400);
+}
+
+/* ================= 无限泡泡玩法 ================= */
+var themeKey="animals", pool=[], poolIdx=0;
+var bubbles=[], rainBubbles=[], rafId=null, lastTs=0;
+var refillTimer=null, rainTimer=null, rainSpawnTimer=null;
+var popCount=0, nextPraiseAt=8+Math.floor(Math.random()*5);
+
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function themeMeta(key){ for(var i=0;i<THEME_META.length;i++) if(THEME_META[i][0]===key) return THEME_META[i]; return THEME_META[0]; }
+function resolveTheme(){
+  if(settings.theme==="random"){ var keys=Object.keys(THEMES); return keys[Math.floor(Math.random()*keys.length)]; }
+  return settings.theme;
+}
+function nextItem(){
+  if(poolIdx>=pool.length){ pool=shuffle(THEMES[themeKey].slice()); poolIdx=0; }
+  return pool[poolIdx++];
+}
+function distToOthers(x,y,size){
+  var cx=x+size/2, cy=y+size/2, min=1e9;
+  for(var i=0;i<bubbles.length;i++){
+    var b=bubbles[i];
+    var dx=(b.x+b.size/2)-cx, dy=(b.y+b.size/2)-cy;
+    var d=Math.sqrt(dx*dx+dy*dy)-(size+b.size)/2;
+    if(d<min) min=d;
+  }
+  return min;
+}
+/* 碰撞模式：同样从屏幕外（超出边缘至少一个直径）滑入，完整进入后才参与反弹/互碰 */
+function makeSpawnCollide(size){
+  var W=window.innerWidth, H=window.innerHeight;
+  var cfg=speedCfg();
+  var spd=cfg.drift+Math.random()*cfg.vary;
+  var off=size+14, edge=Math.floor(Math.random()*4), x,y,vx,vy;
+  if(edge===0){ x=-size-off; y=Math.random()*Math.max(1,(H-size)); vx=spd; vy=(Math.random()*12-6); }
+  else if(edge===1){ x=W+off; y=Math.random()*Math.max(1,(H-size)); vx=-spd; vy=(Math.random()*12-6); }
+  else if(edge===2){ x=Math.random()*Math.max(1,(W-size)); y=-size-off; vx=(Math.random()*12-6); vy=spd; }
+  else { x=Math.random()*Math.max(1,(W-size)); y=H+off; vx=(Math.random()*12-6); vy=-spd; }
+  return { x:x, y:y, vx:vx, vy:vy };
+}
+/* 生成位置：四边随机飘入 + 最小间距拒绝采样，避免重叠成团 */
+function makeSpawn(size){
+  if(settings.collide) return makeSpawnCollide(size);
+  var W=window.innerWidth, H=window.innerHeight;
+  var cfg=speedCfg();
+  var spd=cfg.drift+Math.random()*cfg.vary;
+  var best=null;
+  for(var attempt=0; attempt<12; attempt++){
+    var edge=Math.random(), x,y,vx,vy;
+    var off=size+14; /* 一律在屏外至少一个直径处生成，带初速度丝滑漂入，禁止屏内凭空出现 */
+    if(edge<0.42){ x=Math.random()*Math.max(1,(W-size)); y=H+off; vx=(Math.random()*14-7); vy=-spd; }
+    else if(edge<0.62){ x=-size-off; y=H*0.15+Math.random()*H*0.5; vx=spd*0.9; vy=(Math.random()*10-5); }
+    else if(edge<0.82){ x=W+off; y=H*0.15+Math.random()*H*0.5; vx=-spd*0.9; vy=(Math.random()*10-5); }
+    else { x=Math.random()<0.5? W*0.06 : W*0.78; y=-size-off; vx=(Math.random()*16-8); vy=spd*0.75; }
+    var gap=distToOthers(x,y,size);
+    if(gap>30) return { x:x, y:y, vx:vx, vy:vy };
+    if(!best || gap>best.gap) best={ x:x, y:y, vx:vx, vy:vy, gap:gap };
+  }
+  return best; /* 12 次都没找到宽松位置时用间距最大的那个 */
+}
+/* ================= 泡泡生命特效（作用在内层元素，不影响位置/命中） ================= */
+var TINTS={ pink:"rgba(243,156,182,.5)", blue:"rgba(140,195,240,.5)", green:"rgba(150,210,165,.5)", yellow:"rgba(246,205,95,.5)", purple:"rgba(192,165,228,.5)", orange:"rgba(250,180,105,.5)" };
+var REDUCED = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+/* ①呼吸膨胀：基本大小 ±6% 慢速缩放，各泡相位随机；②形变：scaleX/scaleY 反相 ±4% 果冻形变，周期随机
+   （与邻近泡泡被点破时的果冻晃作用在同一层、同一种形变语言） */
+function applyLife(b){
+  if(b.lifeAnim){ b.lifeAnim.cancel(); b.lifeAnim=null; }
+  if(b.deformAnim){ b.deformAnim.cancel(); b.deformAnim=null; }
+  if(REDUCED) return;
+  if(settings.breathe){
+    b.lifeAnim=b.life.animate([
+      { transform:"scale(0.94)" }, { transform:"scale(1.06)" }, { transform:"scale(0.94)" }
+    ],{ duration:3600+b.seedA*2400, iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*5000) });
+  }
+  if(settings.deform){
+    b.deformAnim=b.jelly.animate([
+      { transform:"scale(1,1)" }, { transform:"scale(1.04,0.96)" }, { transform:"scale(0.96,1.04)" }, { transform:"scale(1,1)" }
+    ],{ duration:2600+b.seedB*2200, iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedA*4000) });
+  }
+}
+/* ③闪闪发光：高光点在泡面缓慢游走 + 偶发小星光闪烁（慢、不频闪） */
+function applySparkle(b){
+  if(!settings.sparkle){
+    if(b.shineEl){ b.shineEl.remove(); b.shineEl=null; }
+    if(b.twinkleEl){ b.twinkleEl.remove(); b.twinkleEl=null; }
+    return;
+  }
+  if(b.shineEl) return;
+  var sh=document.createElement("div"); sh.className="shine";
+  b.life.appendChild(sh); b.shineEl=sh;
+  var m=b.size*0.10;
+  sh.animate([
+    { transform:"translate(0,0) rotate(0deg)" },
+    { transform:"translate("+m+"px,"+(-m*0.5)+"px) rotate(7deg)", offset:0.3 },
+    { transform:"translate("+(m*1.5)+"px,"+(m*0.6)+"px) rotate(-5deg)", offset:0.55 },
+    { transform:"translate("+(m*0.4)+"px,"+(m*1.1)+"px) rotate(6deg)", offset:0.8 },
+    { transform:"translate(0,0) rotate(0deg)" }
+  ],{ duration:7000+b.seedA*4000, iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*6000) });
+  var tw=document.createElement("span"); tw.className="twinkle"; tw.textContent="✦";
+  tw.style.fontSize=Math.round(b.size*0.17)+"px";
+  tw.style.left=(52+b.seedB*22)+"%"; tw.style.top=(16+b.seedA*18)+"%";
+  b.life.appendChild(tw); b.twinkleEl=tw;
+  tw.animate([
+    { opacity:0, transform:"scale(.5) rotate(0deg)" },
+    { opacity:0, transform:"scale(.5) rotate(10deg)", offset:0.7 },
+    { opacity:0.95, transform:"scale(1.1) rotate(24deg)", offset:0.79 },
+    { opacity:0, transform:"scale(.6) rotate(38deg)", offset:0.88 },
+    { opacity:0, transform:"scale(.5) rotate(45deg)" }
+  ],{ duration:8000+b.seedB*5000, iterations:Infinity, delay:-Math.round(b.seedA*7000) });
+}
+/* ④色彩流转：彩色泡泡的 tint 色相在 ±20° 内慢速往复（虹彩感）；关掉彩色泡泡时自动失效，透明泡不受影响 */
+function applyHue(b){
+  if(b.hueAnim){ b.hueAnim.cancel(); b.hueAnim=null; }
+  var on=settings.hueFlow && settings.colorful && b.color && !b.special;
+  if(on){
+    b.sheen.style.opacity="0.55";
+    b.hueAnim=b.sheen.animate([
+      { filter:"hue-rotate(-20deg)" }, { filter:"hue-rotate(20deg)" }, { filter:"hue-rotate(-20deg)" }
+    ],{ duration:9000+b.seedA*5000, iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*8000) });
+  } else {
+    b.sheen.style.opacity="0";
+  }
+}
+/* ⑤慢旋转：内部图案 ±10° 摆动式微旋（整泡不翻转、图案保持可辨认；高光层由闪光游走带轻微转角） */
+function applySpin(b){
+  if(b.spinAnim){ b.spinAnim.cancel(); b.spinAnim=null; }
+  if(REDUCED || !settings.slowSpin || !b.glyphEl) return;
+  b.spinAnim=b.glyphEl.animate([
+    { transform:"rotate(-10deg)" }, { transform:"rotate(10deg)" }, { transform:"rotate(-10deg)" }
+  ],{ duration:6000+b.seedA*4000, iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*5000) });
+}
+/* ⑥碰撞挤压：碰壁/互碰瞬间沿碰撞方向压扁一下再弹回（与形变共用果冻语言，作用在 jelly 层） */
+function squashBubble(b,horizontal){
+  if(!settings.squash || REDUCED || !b.jelly) return;
+  b.jelly.animate([
+    { transform:"scale(1,1)" },
+    { transform: horizontal?"scale(0.8,1.14)":"scale(1.14,0.8)", offset:0.35 },
+    { transform: horizontal?"scale(1.05,0.96)":"scale(0.96,1.05)", offset:0.65 },
+    { transform:"scale(1,1)" }
+  ],{ duration:380, easing:"ease-out" });
+}
+/* ================= 新增 8 种泡泡动态效果（慢速柔和，只用 transform/opacity，不影响命中与位置） ================= */
+function dynTint(b){ return b.special ? "rgba(250,205,95,.55)" : (b.color ? TINTS[b.color] : "rgba(170,215,250,.5)"); }
+function applyDynFx(b){
+  /* 表面波纹：泡面偶发一圈缓慢扩散的波纹 */
+  if(settings.surfRipple && !REDUCED){
+    if(!b.rippleEl){
+      var rp=document.createElement("div"); rp.className="dyn-ripple";
+      b.life.appendChild(rp); b.rippleEl=rp;
+      rp.animate([
+        { transform:"scale(.3)", opacity:0 },
+        { transform:"scale(.42)", opacity:.75, offset:0.05 },
+        { transform:"scale(1)", opacity:0, offset:0.2 },
+        { transform:"scale(1)", opacity:0 }
+      ],{ duration:11000+Math.round(b.seedA*4000), iterations:Infinity, easing:"ease-out", delay:-Math.round(b.seedB*9000) });
+    }
+  } else if(b.rippleEl){ b.rippleEl.remove(); b.rippleEl=null; }
+  /* 泡泡心跳：偶发双下脉冲式缩放（咚-咚） */
+  if(settings.heartbeat && !REDUCED){
+    if(!b.heartAnim){
+      b.heartAnim=b.pulse.animate([
+        { transform:"scale(1)" }, { transform:"scale(1.09)", offset:0.03 }, { transform:"scale(1)", offset:0.06 },
+        { transform:"scale(1.07)", offset:0.09 }, { transform:"scale(1)", offset:0.13 }, { transform:"scale(1)" }
+      ],{ duration:9000+Math.round(b.seedB*4000), iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedA*8000) });
+    }
+  } else if(b.heartAnim){ b.heartAnim.cancel(); b.heartAnim=null; }
+  /* 打哈欠：偶发纵向伸长一下再放松 */
+  if(settings.yawn && !REDUCED){
+    if(!b.yawnAnim){
+      b.yawnAnim=b.mid.animate([
+        { transform:"scale(1,1)" }, { transform:"scale(0.94,1.15)", offset:0.05 }, { transform:"scale(0.97,1.08)", offset:0.09 },
+        { transform:"scale(1,1)", offset:0.14 }, { transform:"scale(1,1)" }
+      ],{ duration:12000+Math.round(b.seedA*5000), iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*10000) });
+    }
+  } else if(b.yawnAnim){ b.yawnAnim.cancel(); b.yawnAnim=null; }
+  /* 柔光光晕：泡泡外圈一层呼吸式柔光晕（颜色随泡泡刷新） */
+  if(settings.halo){
+    var tint=dynTint(b);
+    if(!b.haloEl || b.haloColor!==tint){
+      if(b.haloEl) b.haloEl.remove();
+      var ha=document.createElement("div"); ha.className="halo";
+      ha.style.background="radial-gradient(circle, rgba(255,255,255,0) 52%, "+tint+" 68%, rgba(255,255,255,0) 80%)";
+      b.el.insertBefore(ha,b.life); b.haloEl=ha; b.haloColor=tint;
+      if(!REDUCED) ha.animate([
+        { transform:"scale(.97)", opacity:.45 }, { transform:"scale(1.05)", opacity:.8 }, { transform:"scale(.97)", opacity:.45 }
+      ],{ duration:5200+Math.round(b.seedA*2600), iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedB*4000) });
+    }
+  } else if(b.haloEl){ b.haloEl.remove(); b.haloEl=null; b.haloColor=null; }
+  /* 地面影子：泡泡下方一团随移动轻轻偏移的柔和影子 */
+  if(settings.gshadow){
+    if(!b.shadowEl){
+      var sh2=document.createElement("div"); sh2.className="gshadow";
+      b.el.insertBefore(sh2,b.life); b.shadowEl=sh2;
+      if(!REDUCED) sh2.animate([
+        { transform:"translateX(-5px) scaleX(.94)", opacity:.7 }, { transform:"translateX(5px) scaleX(1.05)", opacity:.95 }, { transform:"translateX(-5px) scaleX(.94)", opacity:.7 }
+      ],{ duration:6000+Math.round(b.seedB*3000), iterations:Infinity, easing:"ease-in-out", delay:-Math.round(b.seedA*5000) });
+    }
+  } else if(b.shadowEl){ b.shadowEl.remove(); b.shadowEl=null; }
+  /* 轨道小星：一颗小星星绕泡泡缓慢公转 */
+  if(settings.orbit && !REDUCED){
+    if(!b.orbitEl){
+      var or=document.createElement("div"); or.className="orbit";
+      var ost=document.createElement("span"); ost.className="ostar"; ost.textContent="⭐";
+      ost.style.fontSize=Math.max(11,Math.round(b.size*0.15))+"px";
+      or.appendChild(ost); b.el.appendChild(or); b.orbitEl=or;
+      or.animate([
+        { transform:"rotate(0deg)" }, { transform:"rotate(360deg)" }
+      ],{ duration:15000+Math.round(b.seedA*7000), iterations:Infinity, easing:"linear", delay:-Math.round(b.seedB*12000) });
+    }
+  } else if(b.orbitEl){ b.orbitEl.remove(); b.orbitEl=null; }
+  /* 彩虹泡边：泡泡边缘一圈缓慢流转的虹彩描边 */
+  if(settings.rainbowEdge && !REDUCED){
+    if(!b.edgeEl){
+      var eg=document.createElement("div"); eg.className="redge";
+      b.el.insertBefore(eg,b.life); b.edgeEl=eg;
+      eg.animate([
+        { transform:"rotate(0deg)" }, { transform:"rotate(360deg)" }
+      ],{ duration:26000, iterations:Infinity, easing:"linear", delay:-Math.round(b.seedA*20000) });
+    }
+  } else if(b.edgeEl){ b.edgeEl.remove(); b.edgeEl=null; }
+  /* 吹小泡泡：偶发吹出一个迷你小泡泡，飘开后轻轻自破 */
+  if(settings.blow && !REDUCED){
+    if(!b.blowEl){
+      var bl=document.createElement("div"); bl.className="blowb";
+      var bs=Math.round(b.size*0.2);
+      bl.style.width=bs+"px"; bl.style.height=bs+"px";
+      b.life.appendChild(bl); b.blowEl=bl;
+      var dr=Math.round(b.size*0.55), up=Math.round(b.size*0.4);
+      bl.animate([
+        { transform:"translate(0,0) scale(.25)", opacity:0 },
+        { transform:"translate(0,0) scale(.7)", opacity:.95, offset:0.04 },
+        { transform:"translate("+(dr*0.4)+"px,"+(-up*0.4)+"px) scale(1)", opacity:.95, offset:0.09 },
+        { transform:"translate("+dr+"px,"+(-up)+"px) scale(1.05)", opacity:.85, offset:0.15 },
+        { transform:"translate("+(dr*1.15)+"px,"+(-up*1.2)+"px) scale(1.35)", opacity:0, offset:0.18 },
+        { transform:"translate("+(dr*1.15)+"px,"+(-up*1.2)+"px) scale(1.35)", opacity:0 }
+      ],{ duration:13000+Math.round(b.seedB*5000), iterations:Infinity, easing:"ease-out", delay:-Math.round(b.seedA*11000) });
+    }
+  } else if(b.blowEl){ b.blowEl.remove(); b.blowEl=null; }
+}
+function spawnBubble(){
+  if(bubbles.length>=targetCount()) return;
+  var s=pickSize();
+  var special = fxOn("surprise") && Math.random()<0.07;
+  var pos=makeSpawn(s.px);
+  var item=nextItem();
+  var color = (special || !settings.colorful) ? null : BUBBLE_COLORS[Math.floor(Math.random()*BUBBLE_COLORS.length)];
+  var el=document.createElement("div");
+  el.className="bubble"+(special?(Math.random()<0.5?" gold":" rainbow"):(color?(" c-"+color):""));
+  el.style.width=s.px+"px"; el.style.height=s.px+"px";
+  var sheen=document.createElement("div"); sheen.className="sheen";
+  if(color) sheen.style.background="radial-gradient(circle at 50% 45%, "+TINTS[color]+" 0%, rgba(255,255,255,0) 72%)";
+  el.appendChild(sheen);
+  var life=document.createElement("div"); life.className="life";
+  var mid=document.createElement("div"); mid.className="mid";
+  var pulse=document.createElement("div"); pulse.className="pulse";
+  var jelly=document.createElement("div"); jelly.className="jelly";
+  var g=document.createElement("span"); g.className="glyph"; g.textContent=item.glyph;
+  g.style.fontSize=Math.round(s.px*0.52)+"px";
+  jelly.appendChild(g); pulse.appendChild(jelly); mid.appendChild(pulse); life.appendChild(mid); el.appendChild(life);
+  /* 害羞泡泡：约 8% 概率带害羞标记（泡面多一抹淡粉腮红） */
+  var shy = settings.shy && !special && Math.random()<0.08;
+  var blushEls=null;
+  if(shy){
+    blushEls=[];
+    ["l","r"].forEach(function(side){
+      var ble=document.createElement("div"); ble.className="blush "+side;
+      life.appendChild(ble); blushEls.push(ble);
+    });
+  }
+  el.style.transform="translate("+pos.x+"px,"+pos.y+"px)";
+  play.appendChild(el);
+  var b={ el:el, jelly:jelly, life:life, mid:mid, pulse:pulse, sheen:sheen, glyphEl:g, item:item, x:pos.x, y:pos.y, vx:pos.vx, vy:pos.vy,
+          size:s.px, cls:s.cls, special:special, color:color, counted:false,
+          shy:shy, blushEls:blushEls, dodges:0, dodgeT:0, dodgeVX:0, dodgeVY:0,
+          shineEl:null, twinkleEl:null, hueAnim:null, lifeAnim:null, deformAnim:null, spinAnim:null, lastTrail:0,
+          rippleEl:null, heartAnim:null, yawnAnim:null, haloEl:null, haloColor:null, shadowEl:null, orbitEl:null, edgeEl:null, blowEl:null,
+          seedA:Math.random(), seedB:Math.random(),
+          phase:Math.random()*Math.PI*2, sway:10+Math.random()*14,
+          speedBase:Math.max(8,Math.sqrt(pos.vx*pos.vx+pos.vy*pos.vy)),
+          wobPeriod:4+Math.random()*5, wobPhase:Math.random()*Math.PI*2,
+          age:0, entered:false, hasEntered:false };
+  el.addEventListener("pointerdown",function(ev){ ev.preventDefault(); ev.stopPropagation(); popBubble(b); });
+  bubbles.push(b);
+  applyLife(b); applySparkle(b); applyHue(b); applySpin(b); applyDynFx(b);
+}
+/* 维持目标数量：缺口越大补给越快（缺满时约 0.3 秒一个），接近目标放慢到基础间隔，达标即停补；
+   「补给速度」连续倍率整体缩放节奏。开局首批也走这条链，天然错峰逐个从屏外滑入。 */
+function refillInterval(){
+  var target=targetCount(), cur=bubbles.length;
+  if(cur>=target) return 900;
+  var frac=(target-cur)/target;
+  var scale = settings.refillMult||1.0; /* 补给间隔倍率（0.4–2.0）：越小补得越快，整体缩放补给间隔 */
+  var base=speedCfg().spawn, fast=300;
+  return (fast+(base-fast)*(1-frac))*scale*(0.85+Math.random()*0.3);
+}
+function refillLoop(){
+  clearTimeout(refillTimer);
+  refillTimer=setTimeout(function(){
+    if(bubbles.length<targetCount()) spawnBubble();
+    refillLoop();
+  }, refillInterval());
+}
+function clampSpeed(b){
+  var cfg=speedCfg();
+  var max=(cfg.drift+cfg.vary)*1.2*effMult, min=cfg.drift*0.4; /* 碰撞限速随加速倍率同步放大，回落后恢复 */
+  var sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+  if(sp>max){ b.vx*=max/sp; b.vy*=max/sp; }
+  else if(sp>0.01 && sp<min){ b.vx*=min/sp; b.vy*=min/sp; }
+}
+/* ================= 空白处加速：短按 0.8 秒脉冲 / 长按持续，全场倍率平滑升降 ================= */
+var boostMult=1, boostHeld=false, boostPressT=0, boostPulseUntil=0;
+function spawnTouchRipple(x,y){
+  var d=document.createElement("div"); d.className="touch-ripple";
+  var s=130; d.style.width=s+"px"; d.style.height=s+"px";
+  d.style.left=(x-s/2)+"px"; d.style.top=(y-s/2)+"px";
+  fxLayer.appendChild(d); setTimeout(function(){ d.remove(); },1100);
+}
+play.addEventListener("pointerdown",function(ev){
+  if(ev.target!==play) return; /* 只认背景层：点中泡泡仍是点破，互不串扰 */
+  boostHeld=true; boostPressT=performance.now();
+  spawnTouchRipple(ev.clientX,ev.clientY);
+});
+function boostRelease(){
+  if(!boostHeld) return;
+  boostHeld=false;
+  if(performance.now()-boostPressT<260) boostPulseUntil=performance.now()+800; /* 短按：约 0.8 秒加速脉冲 */
+}
+window.addEventListener("pointerup",boostRelease);
+window.addEventListener("pointercancel",function(){ boostHeld=false; });
+/* 指针位置追踪：害羞泡泡靠它判断「手指靠近了」 */
+var lastPointer={ x:-9999, y:-9999, t:0 };
+window.addEventListener("pointermove",function(ev){ lastPointer.x=ev.clientX; lastPointer.y=ev.clientY; lastPointer.t=performance.now(); },{ passive:true });
+window.addEventListener("pointerdown",function(ev){ lastPointer.x=ev.clientX; lastPointer.y=ev.clientY; lastPointer.t=performance.now(); });
+
+/* ================= 慌张反应：快速连点触发，未破泡泡加速 + 躲避 + 冒汗（可爱向，无警报音、音调不变） ================= */
+var popTimes=[], panicUntil=0, panicLevel=0, lastPopX=-9999, lastPopY=-9999, lastSweatAt=0, effMult=1;
+function notePopForPanic(cx,cy){
+  lastPopX=cx; lastPopY=cy;
+  if(!settings.panic) return;
+  var now=performance.now();
+  popTimes.push(now);
+  while(popTimes.length && now-popTimes[0]>2000) popTimes.shift();
+  var fast = popTimes.length>=4; /* 约 2 秒内点破 ≥4 个 */
+  if(!fast && popTimes.length>=4){ /* 或连续 3 次点破间隔都 <350ms */
+    var n=popTimes.length;
+    if(now-popTimes[n-2]<350 && popTimes[n-2]-popTimes[n-3]<350 && popTimes[n-3]-popTimes[n-4]<350) fast=true;
+  }
+  if(fast) panicUntil=now+3000; /* 持续到最后一次快速点破后约 3 秒，tick 里平滑进出 */
+  /* 慢速点破：窗口内凑不满 4 个，永不触发 */
+}
+function spawnSweat(b){ /* 偶发小汗滴 / 「！」从泡泡旁冒出 */
+  var bang=Math.random()<0.4;
+  var d=document.createElement("div"); d.className="fx-sweat";
+  d.textContent=bang?"!":"💧";
+  d.style.fontSize=(bang?21:15)+"px";
+  if(bang) d.style.color="#f2a65a";
+  d.style.left=(b.x+b.size*0.74)+"px"; d.style.top=(b.y+b.size*0.02)+"px";
+  fxLayer.appendChild(d);
+  d.animate([
+    { transform:"translate(0,0) scale(.5)", opacity:0 },
+    { transform:"translate(4px,-15px) scale(1.1)", opacity:1, offset:0.35 },
+    { transform:"translate(7px,-29px) scale(1)", opacity:0 }
+  ],{ duration:750, easing:"ease-out" }).onfinish=function(){ d.remove(); };
+}
+/* ================= 泡泡拖尾：移动时身后留淡淡轨迹，快速淡出（慢速时几乎不可见） ================= */
+function spawnTrail(b){
+  if(play.childElementCount>110) return;
+  var d=document.createElement("div"); d.className="trail";
+  var sz=b.size*0.92;
+  d.style.width=sz+"px"; d.style.height=sz+"px";
+  d.style.left=(b.x+(b.size-sz)/2)+"px"; d.style.top=(b.y+(b.size-sz)/2)+"px";
+  d.style.background = b.special
+    ? "radial-gradient(circle at 50% 50%, rgba(250,205,95,.45), rgba(255,255,255,0) 70%)"
+    : b.color
+      ? "radial-gradient(circle at 50% 50%, "+TINTS[b.color]+", rgba(255,255,255,0) 70%)"
+      : "radial-gradient(circle at 50% 50%, rgba(190,225,250,.4), rgba(255,255,255,0) 70%)";
+  play.appendChild(d);
+  d.animate([
+    { transform:"scale(1)", opacity:0.34 },
+    { transform:"scale(.68)", opacity:0 }
+  ],{ duration:480, easing:"ease-out" }).onfinish=function(){ d.remove(); };
+}
+/* 简单弹性碰撞：等质量交换法向速度分量，之后限速防失控 */
+function collideBubbles(){
+  for(var i=0;i<bubbles.length;i++){
+    for(var j=i+1;j<bubbles.length;j++){
+      var a=bubbles[i], c=bubbles[j];
+      if(!a.entered || !c.entered) continue; /* 还没完整滑入的不参与互碰 */
+      var dx=(c.x+c.size/2)-(a.x+a.size/2), dy=(c.y+c.size/2)-(a.y+a.size/2);
+      var rr=(a.size+c.size)/2, d2=dx*dx+dy*dy;
+      if(d2>0.01 && d2<rr*rr){
+        var d=Math.sqrt(d2), nx=dx/d, ny=dy/d, overlap=(rr-d)/2;
+        a.x-=nx*overlap; a.y-=ny*overlap;
+        c.x+=nx*overlap; c.y+=ny*overlap;
+        var avn=a.vx*nx+a.vy*ny, cvn=c.vx*nx+c.vy*ny;
+        if(avn-cvn>0){
+          a.vx+=(cvn-avn)*nx; a.vy+=(cvn-avn)*ny;
+          c.vx+=(avn-cvn)*nx; c.vy+=(avn-cvn)*ny;
+          clampSpeed(a); clampSpeed(c);
+          var horiz=Math.abs(nx)>=Math.abs(ny); /* 互碰瞬间沿碰撞方向挤压一下 */
+          squashBubble(a,horiz); squashBubble(c,horiz);
+        }
+        a.el.style.transform="translate("+a.x+"px,"+a.y+"px)";
+        c.el.style.transform="translate("+c.x+"px,"+c.y+"px)";
+      }
+    }
+  }
+}
+function tick(ts){
+  if(!lastTs) lastTs=ts;
+  var dt=Math.min(0.05,(ts-lastTs)/1000); lastTs=ts;
+  var W=window.innerWidth, H=window.innerHeight;
+  /* 空白处加速倍率：目标 3 倍时约 0.4 秒爬升到位，松手平滑回落，不突变 */
+  var wantBoost=(boostHeld||performance.now()<boostPulseUntil)?3:1;
+  var bRate=wantBoost>boostMult?5:3.4;
+  boostMult+=Math.max(-bRate*dt,Math.min(bRate*dt,wantBoost-boostMult));
+  /* 慌张程度平滑进出：触发后升起、结束约 3 秒后缓缓恢复常态 */
+  var nowMs=performance.now();
+  var pTarget=(settings.panic && nowMs<panicUntil)?1:0;
+  var pRate=pTarget>panicLevel?2.4:1.1;
+  panicLevel+=Math.max(-pRate*dt,Math.min(pRate*dt,pTarget-panicLevel));
+  if(panicLevel<0.01 && pTarget===0) panicLevel=0;
+  effMult=Math.min(4.5, boostMult*(1+0.6*panicLevel)); /* 慌张额外 ×1.6，与空白加速相乘、总倍率封顶 4.5 */
+  /* 微风事件强度包络：约 0.8 秒吹入、约 0.8 秒停歇，风停平滑恢复 */
+  var breezeStr=0;
+  if(breeze.active){ var bAge=(nowMs-breeze.start)/1000, bLeft=(breeze.until-nowMs)/1000; breezeStr=Math.max(0,Math.min(1,bAge/0.8,bLeft/0.8)); }
+  var i,b;
+  for(i=bubbles.length-1;i>=0;i--){
+    b=bubbles[i];
+    b.phase+=dt*0.7;
+    b.age+=dt;
+    /* 速度变化：速度大小按各自慢周期正弦游走（±35%，周期 4–9 秒），关掉则恒速；
+       每帧把速度大小拉回游走值，碰撞/反弹后也按此恢复，不叠加失控 */
+    var wf = settings.speedWobble ? 1+0.35*Math.sin((Math.PI*2*b.age)/b.wobPeriod + b.wobPhase) : 1;
+    var dsp=b.speedBase*wf, csp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
+    if(csp>0.01){ b.vx*=dsp/csp; b.vy*=dsp/csp; }
+    b.x+=b.vx*dt*effMult + Math.cos(b.phase)*b.sway*dt;
+    b.y+=b.vy*dt*effMult + Math.sin(b.phase*0.8)*b.sway*0.6*dt;
+    /* 慌张躲避：离最近点破点较近的泡泡轻轻逃离点击点（范围有限，不满屏乱窜） */
+    if(panicLevel>0.05){
+      var pdx=(b.x+b.size/2)-lastPopX, pdy=(b.y+b.size/2)-lastPopY;
+      var pd=Math.sqrt(pdx*pdx+pdy*pdy);
+      if(pd>1 && pd<200){
+        var df=115*panicLevel*(1-pd/200);
+        b.x+=pdx/pd*df*dt; b.y+=pdy/pd*df*dt;
+      }
+    }
+    /* 微风：全场泡泡被轻轻往同一方向吹偏 */
+    if(breezeStr>0) b.x+=breeze.dir*30*breezeStr*dt;
+    /* 害羞泡泡：指针靠近到约 60px 时轻轻侧移躲开半步（最多躲 2 次、速度不快、仍可点中） */
+    if(b.shy && b.dodges<2){
+      if(b.dodgeT>0){ b.x+=b.dodgeVX*dt; b.y+=b.dodgeVY*dt; b.dodgeT-=dt; }
+      else if(nowMs-lastPointer.t<4000){
+        var sdx=(b.x+b.size/2)-lastPointer.x, sdy=(b.y+b.size/2)-lastPointer.y;
+        var sd=Math.sqrt(sdx*sdx+sdy*sdy);
+        if(sd>1 && sd<b.size/2+60){
+          var dspd=b.size*0.5/0.38;
+          b.dodgeVX=sdx/sd*dspd; b.dodgeVY=sdy/sd*dspd; b.dodgeT=0.38; b.dodges++;
+        }
+      }
+    }
+    /* 慌张时呼吸/形变频率翻倍 */
+    var pr=1+panicLevel;
+    if(b.lifeAnim) b.lifeAnim.playbackRate=pr;
+    if(b.deformAnim) b.deformAnim.playbackRate=pr;
+    if(b.x+b.size>0 && b.x<W && b.y+b.size>0 && b.y<H) b.hasEntered=true;
+    if(b.x>=0 && b.y>=0 && b.x+b.size<=W && b.y+b.size<=H) b.entered=true;
+    if(settings.collide){
+      /* 完整进入后才碰壁反弹；还在滑入途中的不拦 */
+      if(b.entered){
+        if(b.x<=0 && b.vx<0){ b.x=0; b.vx=-b.vx; squashBubble(b,true); }
+        if(b.x+b.size>=W && b.vx>0){ b.x=W-b.size; b.vx=-b.vx; squashBubble(b,true); }
+        if(b.y<=0 && b.vy<0){ b.y=0; b.vy=-b.vy; squashBubble(b,false); }
+        if(b.y+b.size>=H && b.vy>0){ b.y=H-b.size; b.vy=-b.vy; squashBubble(b,false); }
+      }
+    } else if((b.hasEntered && (b.x<-b.size-70 || b.x>W+70 || b.y<-b.size-70 || b.y>H+70)) || (!b.hasEntered && b.age>25)){
+      b.el.remove(); bubbles.splice(i,1); continue; /* 飘走自动补，不惩罚 */
+    }
+    b.el.style.transform="translate("+b.x+"px,"+b.y+"px)";
+    /* 拖尾：速度够快时才留痕（慢速几乎不可见，快速/慌张/加速时明显） */
+    if(settings.trail && !REDUCED){
+      var spdEff=Math.sqrt(b.vx*b.vx+b.vy*b.vy)*effMult;
+      if(spdEff>55 && ts-b.lastTrail>90){ b.lastTrail=ts; spawnTrail(b); }
+    }
+  }
+  if(settings.collide) collideBubbles();
+  /* 慌张冒汗：偶发小汗滴/「！」从靠近点破点的泡泡旁冒出 */
+  if(panicLevel>0.4 && nowMs-lastSweatAt>450 && bubbles.length){
+    lastSweatAt=nowMs;
+    var near=[];
+    for(i=0;i<bubbles.length;i++){
+      var bb=bubbles[i];
+      var ddx=(bb.x+bb.size/2)-lastPopX, ddy=(bb.y+bb.size/2)-lastPopY;
+      if(ddx*ddx+ddy*ddy<230*230) near.push(bb);
+    }
+    var src=near.length?near[Math.floor(Math.random()*near.length)]:bubbles[Math.floor(Math.random()*bubbles.length)];
+    if(src) spawnSweat(src);
+  }
+  for(i=rainBubbles.length-1;i>=0;i--){
+    b=rainBubbles[i];
+    b.phase+=dt*0.9;
+    b.x+=Math.cos(b.phase)*12*dt;
+    b.y+=b.vy*dt*effMult;
+    if(b.y>H+50){ b.el.remove(); rainBubbles.splice(i,1); continue; }
+    b.el.style.transform="translate("+b.x+"px,"+b.y+"px)";
+  }
+  rafId=requestAnimationFrame(tick);
+}
+
+/* ---------- 点破后的趣味反馈 ---------- */
+function spawnRipple(x,y,size,tint){
+  if(fxLevel()==="off" || !fxOn("glow")) return;
+  var r=document.createElement("div"); r.className="ripple";
+  if(tint){ r.style.borderColor=tint; r.style.boxShadow="0 0 0 3px rgba(250,180,100,.35), inset 0 0 12px rgba(255,220,170,.7)"; }
+  r.style.width=size+"px"; r.style.height=size+"px";
+  r.style.left=x+"px"; r.style.top=y+"px";
+  play.appendChild(r); setTimeout(function(){ r.remove(); },1500);
+}
+function spawnDancer(item,cx,cy,big){
+  var d=document.createElement("div"); d.className="dancer";
+  d.textContent=item.glyph;
+  var fs=big?92:52;
+  d.style.fontSize=fs+"px";
+  d.style.left=(cx-fs/2)+"px"; d.style.top=(cy-fs/2)+"px";
+  play.appendChild(d);
+  var spin=big?720:360, hops=big?3:1;
+  var frames=[
+    { transform:"translate(0,0) rotate(0deg) scale(1)", opacity:1 },
+    { transform:"translate(0,-"+(big?46:30)+"px) rotate("+(spin*0.4)+"deg) scale(1.15)", opacity:1, offset:0.22 },
+    { transform:"translate(0,0) rotate("+(spin*0.62)+"deg) scale(1)", opacity:1, offset:0.4 },
+    { transform:"translate(0,-"+(big?38:14)+"px) rotate("+(spin*0.82)+"deg) scale(1.08)", opacity:1, offset:0.58 },
+    { transform:"translate(0,-"+(hops>1?110:90)+"px) rotate("+spin+"deg) scale(1)", opacity:0 }
+  ];
+  d.animate(frames,{ duration:big?3000:2300, easing:"ease-out" }).onfinish=function(){ d.remove(); };
+  /* 小星星陪着一起飘走 */
+  if(fxLevel()!=="off"){
+    var n=big?6:3;
+    for(var i=0;i<n;i++){
+      var st=document.createElement("div"); st.className="mini-star";
+      st.textContent="⭐"; st.style.fontSize=(13+Math.random()*9)+"px";
+      st.style.left=(cx+(Math.random()*70-35))+"px"; st.style.top=(cy+(Math.random()*50-25))+"px";
+      play.appendChild(st);
+      var dx=(Math.random()*60-30), dy=-(70+Math.random()*60);
+      st.animate([
+        { transform:"translate(0,0)", opacity:0 },
+        { transform:"translate("+(dx*0.4)+"px,"+(dy*0.4)+"px)", opacity:1, offset:0.3 },
+        { transform:"translate("+dx+"px,"+dy+"px)", opacity:0 }
+      ],{ duration:2100+Math.random()*500, delay:Math.random()*250, easing:"ease-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(st);
+    }
+  }
+}
+function burstRing(cx,cy){ /* 惊喜泡泡：放出一圈小泡泡 */
+  if(fxLevel()==="off") return;
+  var n=fxLevel()==="rich"?10:7;
+  for(var i=0;i<n;i++){
+    var d=document.createElement("div"); d.className="fx-bub";
+    var sz=14+Math.random()*16;
+    d.style.width=sz+"px"; d.style.height=sz+"px";
+    d.style.left=(cx-sz/2)+"px"; d.style.top=(cy-sz/2)+"px";
+    fxLayer.appendChild(d);
+    var ang=(Math.PI*2*i)/n + Math.random()*0.3;
+    var dist=85+Math.random()*45;
+    var dx=Math.cos(ang)*dist, dy=Math.sin(ang)*dist-26;
+    d.animate([
+      { transform:"translate(0,0) scale(.5)", opacity:0.95 },
+      { transform:"translate("+dx+"px,"+dy+"px) scale(1)", opacity:0 }
+    ],{ duration:1900+Math.random()*400, easing:"ease-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+}
+function jellyNeighbors(cx,cy){
+  for(var i=0;i<bubbles.length;i++){
+    var b=bubbles[i];
+    var dx=(b.x+b.size/2)-cx, dy=(b.y+b.size/2)-cy;
+    if(Math.sqrt(dx*dx+dy*dy)<200 && b.jelly){
+      b.jelly.animate([
+        { transform:"scale(1,1)" },
+        { transform:"scale(1.13,0.9)", offset:0.3 },
+        { transform:"scale(0.94,1.08)", offset:0.55 },
+        { transform:"scale(1.04,0.97)", offset:0.78 },
+        { transform:"scale(1,1)" }
+      ],{ duration:650, easing:"ease-out" });
+    }
+  }
+}
+function popBubble(b){
+  if(b.counted) return;
+  b.counted=true;
+  var idx=bubbles.indexOf(b); if(idx>=0) bubbles.splice(idx,1);
+  var cx=b.x+b.size/2, cy=b.y+b.size/2;
+  notePopForPanic(cx,cy); /* 快速连点检测：触发「慌张反应」 */
+  noteChain(b); /* 同色连锁检测：6 秒内连破 3 个同色触发小庆祝 */
+  AudioBox.popNote(b.cls);
+  if(settings.vibrate){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
+  if(b.special){
+    spawnRipple(b.x,b.y,b.size,"rgba(255,215,120,.95)");
+  } else if(!settings.colorful){
+    /* 彩色关：透明玻璃泡泡，点破特效从全部已开启的特效里随机出一种 */
+    spawnRipple(b.x,b.y,b.size);
+    spawnRandomFx(cx,cy);
+  } else if(b.color==="orange"){
+    spawnRipple(b.x,b.y,b.size,"rgba(250,170,80,.95)"); /* 橙族带一圈柔光涟漪 */
+    spawnFamilyFx("orange",cx,cy);
+  } else {
+    spawnRipple(b.x,b.y,b.size);
+    /* 按颜色分特效：每色一族 3 种随机出；该族全关时只剩基础效果（图案跳舞+涟漪） */
+    spawnFamilyFx(b.color,cx,cy);
+  }
+  if(b.shy){ /* 害羞泡泡点破：双倍粒子特效 */
+    if(b.color) spawnFamilyFx(b.color,cx,cy); else spawnRandomFx(cx,cy);
+  }
+  jellyNeighbors(cx,cy);
+  b.el.classList.add("popping");
+  b.el.style.transform="translate("+b.x+"px,"+b.y+"px) scale(1.22)";
+  var dead=b.el; setTimeout(function(){ dead.remove(); },400);
+  if(b.special){
+    AudioBox.surprise();
+    burstRing(cx,cy);
+    spawnDancer(b.item,cx,cy,true); /* 大号跳舞版 */
+  } else {
+    spawnDancer(b.item,cx,cy,false); /* 就地跳一下转个圈，带小星星飘走 */
+  }
+  popCount++;
+  if(popCount>=nextPraiseAt){ if(settings.praise) showPraise(); nextPraiseAt=popCount+8+Math.floor(Math.random()*5); }
+  if(popCount%20===0) smallCelebrate();
+  /* 点破后立即按当前缺口重启补给节奏，缺口越大补得越快 */
+  refillLoop();
+}
+function popRain(b){
+  if(b.counted) return;
+  b.counted=true;
+  var idx=rainBubbles.indexOf(b); if(idx>=0) rainBubbles.splice(idx,1);
+  AudioBox.tinyPop();
+  spawnRipple(b.x,b.y,b.size);
+  b.el.classList.add("popping");
+  b.el.style.transform="translate("+b.x+"px,"+b.y+"px) scale(1.25)";
+  var dead=b.el; setTimeout(function(){ dead.remove(); },380);
+}
+
+/* ---------- 泡泡雨事件：每 45–75 秒轻轻落一阵小空泡泡 ---------- */
+function scheduleRain(){
+  clearTimeout(rainTimer);
+  if(settings.rainFreq==="off") return;
+  rainTimer=setTimeout(function(){
+    rainEvent();
+    scheduleRain();
+  }, settings.rainFreq==="often" ? 20000+Math.random()*15000 : 45000+Math.random()*30000);
+}
+function rainEvent(){
+  var n=8+Math.floor(Math.random()*5); /* 8–12 个 */
+  var spawned=0;
+  clearTimeout(rainSpawnTimer);
+  (function drop(){
+    if(spawned>=n) return;
+    spawned++;
+    var size=26+Math.random()*104; /* 26–130px 宽幅随机，大小混杂不再整齐划一 */
+    var x=Math.random()*Math.max(1,(window.innerWidth-size));
+    var el=document.createElement("div");
+    el.className="bubble rain";
+    el.style.width=size+"px"; el.style.height=size+"px";
+    el.style.transform="translate("+x+"px,-60px)";
+    play.appendChild(el);
+    var b={ el:el, x:x, y:-60, vy:30+Math.random()*16, size:size, counted:false, phase:Math.random()*Math.PI*2 };
+    el.addEventListener("pointerdown",function(ev){ ev.preventDefault(); ev.stopPropagation(); popRain(b); });
+    rainBubbles.push(b);
+    rainSpawnTimer=setTimeout(drop, 420+Math.random()*320);
+  })();
+}
+
+/* ---------- 微风事件：每约 40–80 秒来一阵约 4 秒的微风，全场轻轻吹偏（带极淡风纹线） ---------- */
+var breezeTimer=null, breeze={ active:false, dir:1, start:0, until:0 };
+function scheduleBreeze(){
+  clearTimeout(breezeTimer);
+  if(!settings.breeze){ breeze.active=false; return; }
+  breezeTimer=setTimeout(function(){
+    breeze.active=true; breeze.dir=Math.random()<0.5?-1:1;
+    breeze.start=performance.now(); breeze.until=breeze.start+4000;
+    spawnWindStreaks(breeze.dir);
+    breezeTimer=setTimeout(function(){ breeze.active=false; scheduleBreeze(); },4000);
+  }, 40000+Math.random()*40000);
+}
+function spawnWindStreaks(dir){
+  for(var i=0;i<6;i++){
+    var d=document.createElement("div"); d.className="wind-line";
+    var w=90+Math.random()*110;
+    d.style.width=w+"px";
+    d.style.top=(8+Math.random()*80)+"%";
+    d.style.left= dir>0 ? (-w-20)+"px" : (window.innerWidth+20)+"px";
+    fxLayer.appendChild(d);
+    var dist=window.innerWidth+w+60;
+    d.animate([
+      { transform:"translateX(0)", opacity:0 },
+      { transform:"translateX("+(dir*dist*0.4)+"px)", opacity:0.8, offset:0.3 },
+      { transform:"translateX("+(dir*dist)+"px)", opacity:0 }
+    ],{ duration:3400, delay:i*260, easing:"ease-in-out" }).onfinish=(function(el){ return function(){ el.remove(); }; })(d);
+  }
+}
+
+/* ================= 开始 / 重开 ================= */
+function clearPlay(){
+  bubbles.forEach(function(b){ b.el.remove(); });
+  rainBubbles.forEach(function(b){ b.el.remove(); });
+  bubbles=[]; rainBubbles=[]; play.innerHTML="";
+  if(rafId) cancelAnimationFrame(rafId); rafId=null;
+  clearTimeout(refillTimer); clearTimeout(rainTimer); clearTimeout(rainSpawnTimer);
+  clearTimeout(breezeTimer); breeze.active=false;
+}
+function startGame(){
+  clearPlay();
+  applyBg(resolveBg());
+  themeKey=resolveTheme();
+  pool=shuffle(THEMES[themeKey].slice()); poolIdx=0;
+  lastTs=0;
+  var meta=themeMeta(themeKey);
+  var tname = settings.lang==="zh" ? meta[2] : meta[3];
+  showBanner(T().bannerTheme+" "+meta[1]+" "+tname, 2600);
+  refillLoop();
+  scheduleRain();
+  scheduleBreeze();
+  rafId=requestAnimationFrame(tick);
+}
+window.addEventListener("resize",function(){ /* 换屏/旋转后数量按新面积走：多了自然飘走，少了自动补 */
+  if(bubbles.length<targetCount()) refillLoop();
+});
+
+/* ================= 设置界面 ================= */
+function segWire(id,key,parse){
+  var seg=$(id);
+  seg.querySelectorAll("button").forEach(function(btn){
+    btn.addEventListener("click",function(){
+      settings[key]=parse?parse(btn.dataset.v):btn.dataset.v;
+      AudioBox.setEnabled(settings.sound);
+      saveSettings(); syncSettingsUI();
+      if(key==="theme") startGame();
+      if(key==="lang") applyLang();
+      if(key==="rainFreq") scheduleRain();
+      if(key==="density"||key==="size"||key==="refill"){ if(bubbles.length<targetCount()) refillLoop(); }
+    });
+  });
+}
+function syncSeg(id,val){
+  $(id).querySelectorAll("button").forEach(function(b){ b.classList.toggle("on", b.dataset.v===String(val)); });
+}
+function themeName(key){
+  if(key==="random") return T().random;
+  var m=themeMeta(key); return m[1]+" "+(settings.lang==="zh"?m[2]:m[3]);
+}
+function bgName(id){
+  if(id==="random") return T().random;
+  var b=bgById(id); return settings.lang==="zh"?b.zh:b.en;
+}
+function syncFxChips(){
+  document.querySelectorAll("#fxChips .fx-chip").forEach(function(btn){
+    btn.classList.toggle("on", fxOn(btn.dataset.fx));
+  });
+}
+function syncBoolChips(){
+  document.querySelectorAll(".bool-chip").forEach(function(btn){
+    btn.classList.toggle("on", !!settings[btn.dataset.k]);
+  });
+  /* 动态效果摘要行：已开 n/15（随开关与语言实时刷新） */
+  var dynN=0;
+  document.querySelectorAll("#bubbleChips .bool-chip").forEach(function(b){ if(b.classList.contains("on")) dynN++; });
+  $("dynToggleText").textContent = settings.lang==="zh"
+    ? (T().dynGroup+" · "+T().fxOpen+" "+dynN+"/15")
+    : (T().dynGroup+" · "+dynN+"/15 "+T().fxOpen);
+}
+function syncSettingsUI(){
+  syncSliders();
+  syncFxChips();
+  syncBoolChips();
+  syncSeg("rainSeg",settings.rainFreq);
+  syncSeg("fxSeg",settings.fx);
+  syncSeg("langSeg",settings.lang);
+  $("themeSummaryText").textContent=themeName(settings.theme);
+  $("bgSummaryText").textContent=bgName(settings.bg);
+  $("bgSummarySw").style.background = settings.bg==="random" ? "conic-gradient(#f6c6d3,#f9e29c,#c4e6cd,#bfe0f2,#ddd0ee,#f6c6d3)" : bgById(settings.bg).css;
+}
+function applyLang(){
+  document.querySelectorAll("[data-i18n]").forEach(function(el){
+    var k=el.getAttribute("data-i18n"); if(T()[k]) el.textContent=T()[k];
+  });
+  document.documentElement.lang = settings.lang==="zh" ? "zh" : "en";
+  document.title = settings.lang==="zh" ? "泡泡乐园" : "Bubble Fun";
+  syncSettingsUI(); buildPickers();
+}
+function buildPickers(){
+  var tg=$("themeGrid"); tg.innerHTML="";
+  var rb=document.createElement("button");
+  if(settings.theme==="random") rb.className="on";
+  rb.innerHTML='<span class="pg-glyph">🎲</span><span>'+T().random+'</span>';
+  rb.addEventListener("click",function(){ settings.theme="random"; saveSettings(); syncSettingsUI(); buildPickers(); startGame(); });
+  tg.appendChild(rb);
+  THEME_META.forEach(function(m){
+    var b=document.createElement("button");
+    if(settings.theme===m[0]) b.className="on";
+    var gl=document.createElement("span"); gl.className="pg-glyph"; gl.textContent=m[1];
+    var tx=document.createElement("span"); tx.textContent=(settings.lang==="zh"?m[2]:m[3])+" · "+THEMES[m[0]].length;
+    b.appendChild(gl); b.appendChild(tx);
+    b.addEventListener("click",function(){ settings.theme=m[0]; saveSettings(); syncSettingsUI(); buildPickers(); startGame(); });
+    tg.appendChild(b);
+  });
+  var bg=$("bgGrid"); bg.innerHTML="";
+  var rb2=document.createElement("button");
+  if(settings.bg==="random") rb2.className="on";
+  rb2.innerHTML='<span class="pg-sw" style="background:conic-gradient(#f6c6d3,#f9e29c,#c4e6cd,#bfe0f2,#ddd0ee,#f6c6d3)"></span><span>'+T().random+'</span>';
+  rb2.addEventListener("click",function(){ settings.bg="random"; saveSettings(); syncSettingsUI(); buildPickers(); applyBg(resolveBg()); });
+  bg.appendChild(rb2);
+  BGS.forEach(function(bdef){
+    var b=document.createElement("button");
+    if(settings.bg===bdef.id) b.className="on";
+    var sw=document.createElement("span"); sw.className="pg-sw"; sw.style.background=bdef.css;
+    var tx=document.createElement("span"); tx.textContent=(settings.lang==="zh"?bdef.zh:bdef.en);
+    b.appendChild(sw); b.appendChild(tx);
+    b.addEventListener("click",function(){ settings.bg=bdef.id; saveSettings(); syncSettingsUI(); buildPickers(); applyBg(bdef.id); });
+    bg.appendChild(b);
+  });
+}
+function openOverlay(id){ $(id).classList.add("open"); }
+function closeOverlay(id){ $(id).classList.remove("open"); }
+
+$("btnSettings").addEventListener("click",function(){ AudioBox.unlock(); openOverlay("settingsPanel"); });
+$("settingsBack").addEventListener("click",function(){ closeOverlay("settingsPanel"); });
+$("settingsDone").addEventListener("click",function(){ closeOverlay("settingsPanel"); });
+$("themeSummary").addEventListener("click",function(){ openOverlay("themePicker"); });
+$("themeBack").addEventListener("click",function(){ closeOverlay("themePicker"); });
+$("bgSummary").addEventListener("click",function(){ openOverlay("bgPicker"); });
+$("bgBack").addEventListener("click",function(){ closeOverlay("bgPicker"); });
+/* 动态效果展开/收起：只在泡泡 Tab 内占位，整页不滚动；默认收起 */
+$("dynToggle").addEventListener("click",function(){
+  var grid=$("bubbleChips"), open=grid.hidden;
+  grid.hidden=!open;
+  $("dynToggle").classList.toggle("open",open);
+  $("dynToggle").setAttribute("aria-expanded", open?"true":"false");
+});
+/* 设置 Tab 切换：顶部 Tab 栏常驻，点哪个显示哪个，其余隐藏 */
+document.querySelectorAll("#setTabs button").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    document.querySelectorAll("#setTabs button").forEach(function(x){ x.classList.toggle("on", x===btn); });
+    ["bubbles","fx","visual","sound"].forEach(function(t){ $("tab-"+t).hidden = t!==btn.dataset.tab; });
+  });
+});
+$("btnRestart").addEventListener("click",function(){ AudioBox.unlock(); startGame(); });
+document.addEventListener("pointerdown",function(){ AudioBox.unlock(); },{ once:true });
+
+/* ---------- 四项滑条：一行式（左标题/中滑条/右数值）、连续可调不吸附档位（步进 0.05） ---------- */
+function fmtMult(v){ return "×"+v.toFixed(2); }
+function fmtSpeed(v){ return (Math.round(v*100)/100).toString().replace(/\.?0+$/,"")+"×"; }
+var SLIDERS={
+  speed:  { key:"speedMult",  fmt:fmtSpeed },
+  count:  { key:"countMult",  fmt:fmtMult },
+  refill: { key:"refillMult", fmt:fmtMult },
+  size:   { key:"sizeMult",   fmt:fmtMult }
+};
+function refreshSliderLabel(which){
+  var cfg=SLIDERS[which];
+  $(which+"Val").textContent=cfg.fmt(settings[cfg.key]);
+}
+function syncSliders(){
+  for(var which in SLIDERS){
+    $(which+"Slider").value=settings[SLIDERS[which].key];
+    refreshSliderLabel(which);
+  }
+}
+function setupSlider(which){
+  var cfg=SLIDERS[which], inp=$(which+"Slider");
+  inp.addEventListener("input",function(){
+    var v=parseFloat(inp.value);
+    if(isNaN(v)) return;
+    if(which==="speed"){ /* 速度拖动即时生效：场上泡泡的基础速度按新旧漂移比同步缩放 */
+      var oldDrift=speedCfg().drift;
+      settings.speedMult=v;
+      var nd=speedCfg().drift;
+      if(oldDrift>0) bubbles.forEach(function(b){ b.speedBase*=nd/oldDrift; });
+    } else {
+      settings[cfg.key]=v;
+    }
+    refreshSliderLabel(which); saveSettings();
+    if(bubbles.length<targetCount()) refillLoop();
+  });
+}
+["speed","count","refill","size"].forEach(setupSlider);
+segWire("rainSeg","rainFreq");
+segWire("fxSeg","fx");
+document.querySelectorAll("#fxChips .fx-chip").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    var key=btn.dataset.fx;
+    if(!settings.fxToggles) settings.fxToggles=JSON.parse(JSON.stringify(FX_TOGGLE_DEFAULTS));
+    settings.fxToggles[key]=!fxOn(key);
+    saveSettings(); syncFxChips(); syncSettingsUI();
+    if(settings.fxToggles[key]) startPreview("pop",key); /* 关→开时自动演示一次该点破特效 */
+  });
+});
+/* 布尔开关网格：碰撞/彩色/速度变化/夸奖/音效/轻音乐/震动 */
+function applyColorfulLive(){
+  bubbles.forEach(function(b){
+    if(b.special) return;
+    if(settings.colorful){
+      if(!b.color){
+        b.color=BUBBLE_COLORS[Math.floor(Math.random()*BUBBLE_COLORS.length)];
+        b.el.classList.add("c-"+b.color);
+        b.sheen.style.background="radial-gradient(circle at 50% 45%, "+TINTS[b.color]+" 0%, rgba(255,255,255,0) 72%)";
+      }
+    } else if(b.color){ b.el.classList.remove("c-"+b.color); b.color=null; }
+    applyHue(b); /* 色彩流转随彩色开关自动失效/恢复 */
+    applyDynFx(b); /* 柔光光晕的颜色随彩色开关刷新 */
+  });
+}
+document.querySelectorAll(".bool-chip").forEach(function(btn){
+  btn.addEventListener("click",function(){
+    var key=btn.dataset.k;
+    settings[key]=!settings[key];
+    if(key==="sound") AudioBox.setEnabled(settings.sound);
+    if(key==="music") AudioBox.setMusic(settings.music);
+    if(key==="colorful") applyColorfulLive();
+    if(key==="breathe"||key==="deform") bubbles.forEach(applyLife);
+    if(key==="sparkle") bubbles.forEach(applySparkle);
+    if(key==="hueFlow") bubbles.forEach(applyHue);
+    if(key==="slowSpin") bubbles.forEach(applySpin);
+    if(key==="surfRipple"||key==="heartbeat"||key==="yawn"||key==="halo"||key==="gshadow"||key==="orbit"||key==="rainbowEdge"||key==="blow") bubbles.forEach(applyDynFx);
+    if(key==="breeze") scheduleBreeze();
+    if(key==="shy" && !settings.shy) bubbles.forEach(function(b){ b.shy=false; if(b.blushEls){ b.blushEls.forEach(function(e){ e.remove(); }); b.blushEls=null; } });
+    if(key==="panic" && !settings.panic){ panicUntil=0; popTimes=[]; }
+    saveSettings(); syncSettingsUI();
+    if(settings[key] && DYN_KEYS.indexOf(key)>=0) startPreview("dyn",key); /* 关→开时自动演示一次该动态效果 */
+  });
+});
+segWire("langSeg","lang");
+
+/* ================= 特效演示预览（照记忆翻牌的预览做法） =================
+   点破特效（27 个）与泡泡动态效果（15 个）的开关 chip：关→开时自动演示一次；
+   点 chip 的名称区可随时重看演示、不改开关状态。演示在独立的全屏透明舞台上播放，
+   设置层先淡出隐藏；点任意处提前结束，约 2–2.5 秒后自动恢复设置层（原 Tab 原状态）。
+   演示全程不写设置、不影响对局。 */
+var DYN_KEYS=["breathe","deform","sparkle","hueFlow","trail","slowSpin","squash","surfRipple","heartbeat","yawn","halo","gshadow","orbit","rainbowEdge","blow"];
+var FX_I18N={ confetti:"fxConfetti", stars:"fxStars", hearts:"fxHearts", petals:"fxPetals", ribbons:"fxRibbons", glow:"fxGlow", surprise:"fxSurprise",
+  notes:"fxNotes", fireworks:"fxFireworks", butterfly:"fxButterfly", snow:"fxSnow", feather:"fxFeather", candy:"fxCandy", bloom:"fxBloom",
+  minibub:"fxMinibub", rainbowArc:"fxRainbowArc", splash:"fxSplash", glitter:"fxGlitter", balloon:"fxBalloon",
+  stardust:"fxStardust", raindrops:"fxRaindrops", moonstars:"fxMoonstars", plane:"fxPlane", pinwheel:"fxPinwheel", wreath:"fxWreath", smoke:"fxSmoke", drizzle:"fxDrizzle" };
+var DYN_I18N={ breathe:"breathe", deform:"deform", sparkle:"sparkleFx", hueFlow:"hueFlow", trail:"trail", slowSpin:"slowSpin", squash:"squash",
+  surfRipple:"surfRipple", heartbeat:"heartbeat", yawn:"yawn", halo:"halo", gshadow:"gshadow", orbit:"orbit", rainbowEdge:"rainbowEdge", blow:"blow" };
+var pv={ active:false, timer:null, interval:null, restoreFx:null };
+function makeDemoBubble(color){
+  var wrap=$("pvBubbleWrap"); wrap.innerHTML="";
+  var size=124;
+  var el=document.createElement("div");
+  el.className="bubble"+(color?(" c-"+color):"");
+  el.style.width=size+"px"; el.style.height=size+"px";
+  el.style.left=(-size/2)+"px"; el.style.top=(-size/2)+"px";
+  var sheen=document.createElement("div"); sheen.className="sheen";
+  if(color) sheen.style.background="radial-gradient(circle at 50% 45%, "+TINTS[color]+" 0%, rgba(255,255,255,0) 72%)";
+  el.appendChild(sheen);
+  var life=document.createElement("div"); life.className="life";
+  var mid=document.createElement("div"); mid.className="mid";
+  var pulse=document.createElement("div"); pulse.className="pulse";
+  var jelly=document.createElement("div"); jelly.className="jelly";
+  var item=THEMES[themeKey][Math.floor(Math.random()*THEMES[themeKey].length)];
+  var g=document.createElement("span"); g.className="glyph"; g.textContent=item.glyph;
+  g.style.fontSize=Math.round(size*0.52)+"px";
+  jelly.appendChild(g); pulse.appendChild(jelly); mid.appendChild(pulse); life.appendChild(mid); el.appendChild(life);
+  wrap.appendChild(el);
+  return { el:el, jelly:jelly, life:life, mid:mid, pulse:pulse, sheen:sheen, glyphEl:g, item:item, size:size, cls:"M", special:false, color:color,
+    shineEl:null, twinkleEl:null, hueAnim:null, lifeAnim:null, deformAnim:null, spinAnim:null,
+    rippleEl:null, heartAnim:null, yawnAnim:null, haloEl:null, haloColor:null, shadowEl:null, orbitEl:null, edgeEl:null, blowEl:null,
+    seedA:Math.random(), seedB:Math.random() };
+}
+function startPreview(type,key){
+  if(pv.active) return;
+  pv.active=true;
+  $("settingsPanel").classList.add("faded"); /* 设置层先淡出隐藏 */
+  $("pvName").textContent = type==="pop" ? (T()[FX_I18N[key]]||key) : (T()[DYN_I18N[key]]||key);
+  $("pvLabel").classList.add("on");
+  $("previewStage").classList.add("on");
+  if(type==="pop") runPopPreview(key); else runDynPreview(key);
+  pv.timer=setTimeout(endPreview, type==="pop" ? 2300 : 2600); /* 约 2–2.5 秒后自动恢复设置层 */
+}
+function endPreview(){
+  if(!pv.active) return;
+  pv.active=false;
+  clearTimeout(pv.timer);
+  if(pv.interval){ clearInterval(pv.interval); pv.interval=null; }
+  if(pv.restoreFx!=null){ settings.fx=pv.restoreFx; pv.restoreFx=null; }
+  $("pvBubbleWrap").innerHTML="";
+  $("previewStage").classList.remove("on");
+  $("pvLabel").classList.remove("on");
+  $("settingsPanel").classList.remove("faded"); /* 恢复设置层：停留在原 Tab、原开关状态 */
+}
+$("previewStage").addEventListener("pointerdown",function(ev){ ev.preventDefault(); ev.stopPropagation(); endPreview(); }); /* 点任意处提前结束 */
+function runPopPreview(key){
+  var color=null, c;
+  for(c in FX_FAMILY){ if(FX_FAMILY[c].indexOf(key)>=0){ color=c; break; } }
+  var b=makeDemoBubble(color); /* 演示泡泡带该特效所属颜色 */
+  pv.restoreFx=settings.fx; settings.fx="rich"; /* 演示用全量粒子：只改内存值、从不保存，生成后立即恢复 */
+  var rect=b.el.getBoundingClientRect();
+  var cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  setTimeout(function(){
+    if(!pv.active) return; /* 已被提前结束：设置值已由 endPreview 恢复 */
+    spawnRipple(cx-rect.width/2, cy-rect.height/2, rect.width, color==="orange" ? "rgba(250,170,80,.95)" : null);
+    if(key==="surprise"){ burstRing(cx,cy); spawnDancer(b.item,cx,cy,true); }
+    else if(FX_SPAWN[key]) FX_SPAWN[key](cx,cy);
+    b.el.classList.add("popping");
+    b.el.style.transform="scale(1.22)";
+    setTimeout(function(){ b.el.remove(); },420);
+    if(pv.restoreFx!=null){ settings.fx=pv.restoreFx; pv.restoreFx=null; }
+  },480);
+}
+function runDynPreview(key){
+  var color = key==="hueFlow" ? "purple" : (Math.random()<0.5 ? "pink" : "blue");
+  var b=makeDemoBubble(color);
+  /* 让偶发类效果在演示窗口内必然出现：把相位种子拨到周期开头附近 */
+  if(key==="surfRipple" || key==="yawn") b.seedB=0.02;
+  if(key==="heartbeat") b.seedA=0.02;
+  if(key==="blow"){ b.seedA=0.05; b.seedB=0.05; }
+  /* 临时只点亮被演示的这一项来套用现有效果函数，套用完立即恢复真实设置（不保存、场上泡泡不受影响） */
+  var stash={}, stashColorful=settings.colorful;
+  DYN_KEYS.forEach(function(k){ stash[k]=settings[k]; settings[k]=(k===key); });
+  settings.colorful=true;
+  applyLife(b); applySparkle(b); applyHue(b); applySpin(b); applyDynFx(b);
+  DYN_KEYS.forEach(function(k){ settings[k]=stash[k]; });
+  settings.colorful=stashColorful;
+  if(key==="trail"){ /* 演示泡泡在中央小幅来回漂移，身后不断留下淡淡拖尾 */
+    b.el.animate([
+      { transform:"translate(-72px,10px)" }, { transform:"translate(72px,-10px)" }, { transform:"translate(-72px,10px)" }
+    ],{ duration:2300, iterations:Infinity, easing:"ease-in-out" });
+    pv.interval=setInterval(function(){
+      var r=b.el.getBoundingClientRect();
+      spawnTrail({ x:r.left, y:r.top, size:r.width, special:false, color:color });
+    },95);
+  } else if(key==="squash"){ /* 每约 0.7 秒沿交替方向压扁一下再弹回 */
+    var horiz=false;
+    squashBubble(b,true);
+    pv.interval=setInterval(function(){ horiz=!horiz; squashBubble(b,horiz); },720);
+  }
+}
+/* chip 名称区 = 预览触发：点名称只看演示、不改开关状态（27 个点破特效 + 15 个动态效果） */
+function wirePreviewName(btn,type,key){
+  var nameSpan=btn.querySelector("span");
+  if(!nameSpan) return;
+  nameSpan.classList.add("pv-name");
+  nameSpan.addEventListener("click",function(ev){ ev.stopPropagation(); startPreview(type,key); });
+}
+document.querySelectorAll("#fxChips .fx-chip").forEach(function(btn){ wirePreviewName(btn,"pop",btn.dataset.fx); });
+document.querySelectorAll(".bool-chip").forEach(function(btn){
+  if(DYN_KEYS.indexOf(btn.dataset.k)>=0) wirePreviewName(btn,"dyn",btn.dataset.k);
+});
+
+/* ================= 启动 ================= */
+AudioBox.setEnabled(settings.sound);
+AudioBox.setMusic(settings.music);
+applyLang();
+applyBg(resolveBg());
+startGame();
+</script>
+</body>
+</html>

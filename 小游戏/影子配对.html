@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" href="data:," />
+<title>影子配对</title>
+<style>
+  :root{
+    --ink:#5b4632; --ink-soft:#8a715a; --card:#fffdf7; --line:#e8d9c3;
+    --accent:#f2a65a; --accent-soft:#fdeeda;
+    --pink:#f6c6d3; --sky:#bfe0f2; --mint:#c4e6cd; --lav:#ddd0ee; --butter:#f9e29c;
+    --shadow:0 4px 14px rgba(120,84,40,.12);
+    /* 与 0 号「记忆翻牌配对」统一的面板语言 */
+    --panel:rgba(255,252,244,.88); --panel-solid:#fffcf4;
+    --panel-line:rgba(91,70,50,.14); --chip:rgba(255,255,255,.65);
+    --gold:#e9a13b; --panel-shadow:0 18px 50px rgba(64,32,8,.18);
+    --card-shadow:0 6px 16px rgba(60,30,5,.16);
+    --bg:#fdf3d8; --cell:120px;
+  }
+  #app[data-bg="cream"]{ --bg:#fdf3d8; } #app[data-bg="pink"]{ --bg:#fdeef1; }
+  #app[data-bg="sky"]{ --bg:#e9f4fb; } #app[data-bg="mint"]{ --bg:#eaf7ee; }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ overflow:hidden; overscroll-behavior:none; }
+  html,body{ height:100%; }
+  body{ margin:0; color:var(--ink); overflow:hidden; height:100dvh; overscroll-behavior:none; touch-action:manipulation;
+    font-family:ui-rounded,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif; }
+  button{ font:inherit; color:inherit; border:none; background:none; cursor:pointer; min-height:44px; }
+  button:active{ transform:scale(.96); }
+
+  #app{ position:relative; height:100dvh; display:flex; flex-direction:column; background:var(--bg);
+    transition:background .35s; overflow:hidden;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  #app::before{ content:""; position:absolute; inset:0; pointer-events:none; opacity:.5; z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.72 0 0 0 0 0.60 0 0 0 0.42 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #app > *{ position:relative; z-index:1; }
+  #app > .overlay, #app > #fxLayer, #app > .praise, #app > .hint-banner, #app > .name-card, #app > .tryon-fly{ position:absolute; }
+
+  .topbar{ display:flex; align-items:center; gap:6px; margin:6px 10px 0; padding:5px;
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:14px;
+    box-shadow:var(--panel-shadow); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    position:relative; z-index:45; flex:none; }
+  .star-badge{ display:flex; align-items:center; gap:6px; background:var(--chip); border:2px solid transparent;
+    border-radius:999px; padding:3px 14px 3px 9px; font-size:20px; font-weight:900; min-height:44px; font-variant-numeric:tabular-nums; }
+  .star-badge .star-ico{ font-size:22px; display:inline-block; }
+  .star-badge.pop .star-ico{ animation:starPop .45s ease; }
+  @keyframes starPop{ 0%{transform:scale(1)} 40%{transform:scale(1.7) rotate(18deg)} 100%{transform:scale(1)} }
+  .topbar .spacer{ flex:1; }
+  .round-label{ font-size:14px; font-weight:800; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .round-btn{ width:44px; height:44px; min-height:44px; border-radius:50%; background:var(--chip); border:1px solid var(--panel-line);
+    font-size:19px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .round-btn:active{ transform:scale(.94); }
+  .round-btn.off{ opacity:.42; filter:grayscale(1); }
+
+  .theme-pill{ align-self:center; margin-top:6px; background:var(--panel); border:1px solid var(--panel-line);
+    border-radius:999px; padding:3px 16px; font-size:14px; font-weight:800; color:var(--ink-soft); box-shadow:var(--shadow); flex:none; }
+
+  .target-wrap{ display:flex; flex-direction:column; align-items:center; padding:6px 14px 0; position:relative; }
+  /* 影子小剧场：展示区暖色聚光（静态光圈，不闪烁） */
+  .spotlight{ position:absolute; left:50%; top:44%; transform:translate(-50%,-50%); width:250px; height:250px; border-radius:50%;
+    pointer-events:none; z-index:0;
+    background:radial-gradient(circle, rgba(255,205,120,.55) 0%, rgba(255,190,100,.28) 42%, rgba(255,190,100,0) 70%);
+    transition:filter .45s ease, transform .45s ease; }
+  .spotlight.lit{ filter:brightness(1.55); transform:translate(-50%,-50%) scale(1.12); }
+  .target-wrap .target-card, .target-wrap .target-name{ position:relative; z-index:1; }
+  /* 名称卡（蒙氏命名）：配对成功后浮现中文名+英文名大字 */
+  .name-card{ position:absolute; left:50%; top:38%; transform:translate(-50%,-50%) scale(.85); z-index:36; pointer-events:none;
+    background:var(--panel-solid); border:2.5px solid var(--gold); border-radius:18px; box-shadow:var(--panel-shadow);
+    padding:12px 30px 14px; text-align:center; opacity:0; }
+  .name-card.show{ animation:nameCardIn 1.6s ease forwards; }
+  .name-card .nc-zh{ font-size:36px; font-weight:900; line-height:1.15; }
+  .name-card .nc-en{ font-size:20px; font-weight:800; color:var(--ink-soft); letter-spacing:.04em; }
+  @keyframes nameCardIn{ 0%{opacity:0; transform:translate(-50%,-50%) scale(.8)} 14%{opacity:1; transform:translate(-50%,-50%) scale(1)} 78%{opacity:1} 100%{opacity:0; transform:translate(-50%,-54%) scale(1.02)} }
+  /* 试穿：半透明剪影飞到目标上叠合，不合的边缘柔光亮起 */
+  .tryon-fly{ position:absolute; z-index:32; pointer-events:none; opacity:.62;
+    filter:drop-shadow(0 0 7px rgba(255,176,66,.95)) drop-shadow(0 0 16px rgba(255,140,40,.55)); }
+  .tryon-fly .art{ width:100%; height:100%; }
+  /* 描边影子样式：只留轮廓线、内部透明 */
+  .opt.shadow-outline .art{ filter:none; }
+  .outline-glyph{ color:rgba(91,70,50,.10); -webkit-text-stroke:2.5px #5b4632; paint-order:stroke fill; }
+  .target-card{ width:var(--cell); height:var(--cell); background:var(--panel-solid); border:2px solid rgba(255,255,255,.85);
+    border-radius:16px; box-shadow:var(--card-shadow); display:flex; align-items:center; justify-content:center; padding:8px; }
+  .target-name{ font-size:20px; font-weight:800; margin-top:5px; min-height:26px; }
+  .art{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
+    font-size:calc(var(--cell)*.64); }
+  .art svg{ width:100%; height:100%; }
+  .art .emoji{ line-height:1; }
+  .art .glyph-text{ font-weight:900; color:var(--ink); }
+  .shadow .art{ filter:brightness(0); }
+  .art-stack{ position:relative; width:100%; height:100%; }
+  .art-stack .art{ position:absolute; inset:0; }
+  .target-card.dance .art{ animation:dance .8s ease; }
+  @keyframes dance{ 0%,100%{transform:translateY(0) rotate(0)} 20%{transform:translateY(-12%) rotate(-7deg)} 45%{transform:translateY(0) rotate(6deg)} 65%{transform:translateY(-9%) rotate(-4deg)} 85%{transform:translateY(0) rotate(2deg)} }
+
+  .mascot-row{ display:flex; align-items:center; gap:10px; padding:2px 18px 0; min-height:52px; }
+  .mascot{ width:46px; height:46px; flex:none; }
+  .mascot .art{ font-size:34px; }
+  .bubble{ background:var(--card); border:2px solid var(--line); border-radius:16px; padding:6px 12px;
+    font-size:15px; font-weight:700; box-shadow:var(--shadow); opacity:0; transform:translateY(4px);
+    transition:opacity .25s, transform .25s; max-width:78%; }
+  .bubble.show{ opacity:1; transform:none; }
+
+  .options{ display:grid; gap:10px; padding:8px 16px 0; justify-content:center; align-content:start; }
+  .opt{ background:var(--panel-solid); border:2px solid rgba(255,255,255,.85); border-radius:16px; box-shadow:var(--card-shadow);
+    width:var(--cell); height:var(--cell); display:flex; align-items:center; justify-content:center; padding:8px; min-height:56px;
+    transition:opacity .3s, filter .3s; }
+  .opt.right{ border-color:#8fce6e; background:#f0f9e8; }
+  .opt.dim{ opacity:.45; filter:brightness(.75); }
+  .opt.hinted{ border-color:var(--accent); outline:4px dashed rgba(242,166,90,.65); outline-offset:2px; }
+
+  .dots{ display:flex; gap:7px; justify-content:center; padding:10px 0 calc(8px + env(safe-area-inset-bottom)); margin-top:auto; }
+  .dots span{ width:11px; height:11px; border-radius:50%; background:#e8d9c3; border:2px solid #d9c5a5; }
+  .dots span.done{ background:var(--accent); border-color:var(--accent); }
+  .dots span.now{ background:#fff; border-color:var(--accent); transform:scale(1.25); }
+
+  .hint-banner{ left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translate(-50%,90px);
+    background:#fff3f6; border:2px solid var(--pink); color:var(--ink); font-weight:800; font-size:16px;
+    border-radius:999px; padding:10px 22px; box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 -3px 8px rgba(0,0,0,.08); transition:transform .3s ease; z-index:40;
+    pointer-events:none; white-space:nowrap; max-width:92vw; overflow:hidden; text-overflow:ellipsis; }
+  .hint-banner.show{ transform:translate(-50%,0); }
+  .hint-banner.rand{ background:#eef6e6; border-color:#bcd9a8; }
+
+  .praise{ inset:0; display:flex; align-items:center; justify-content:center; z-index:35; pointer-events:none;
+    font-size:min(17vw,74px); font-weight:900; color:var(--accent);
+    text-shadow:0 3px 0 #fff, 0 8px 22px rgba(242,166,90,.4); opacity:0; }
+  .praise.show{ animation:praiseIn 1.15s ease forwards; }
+  @keyframes praiseIn{ 0%{opacity:0; transform:scale(.4) rotate(-5deg)} 22%{opacity:1; transform:scale(1.12) rotate(2deg)} 38%{transform:scale(1)} 78%{opacity:1} 100%{opacity:0; transform:scale(1.04)} }
+
+  #fxLayer{ inset:0; pointer-events:none; z-index:30; overflow:hidden; }
+  .confetti{ position:absolute; border-radius:3px; will-change:transform,opacity; }
+  .fx-particle{ position:absolute; will-change:transform,opacity; pointer-events:none; }
+  .fly-star{ position:absolute; font-size:30px; will-change:transform,opacity; z-index:31; pointer-events:none; }
+
+  .overlay{ inset:0; z-index:50; background:var(--bg); display:none; flex-direction:column; overflow:hidden;
+    padding:calc(8px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom)); }
+  .overlay.open{ display:flex; }
+  .overlay.sheet-page{ background:var(--panel-solid); z-index:60; }
+  .overlay h2{ margin:0; font-size:21px; letter-spacing:.03em; }
+  /* 面板顶栏：返回按钮常驻，与 0 号选择器同款圆形关闭钮 */
+  .panel-head{ flex:0 0 auto; display:flex; align-items:center; gap:10px; margin-bottom:8px; min-height:44px; }
+  .panel-head h2{ flex:1; }
+  .panel-head .head-note{ font-size:12.5px; font-weight:700; color:var(--ink-soft); white-space:nowrap; }
+  .picker-close{ width:44px; height:44px; min-height:44px; flex:0 0 auto; border-radius:50%; border:2px solid var(--panel-line);
+    background:var(--chip); color:var(--ink); font-size:17px; font-weight:800; line-height:1;
+    display:flex; align-items:center; justify-content:center; }
+  .picker-close:active{ transform:scale(.94); }
+  /* 设置列表：一屏排完，行距随高度收紧 */
+  .set-list{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; justify-content:space-between; gap:6px; }
+  .set-row .lab{ font-size:12px; font-weight:800; letter-spacing:.08em; color:var(--ink-soft); margin-bottom:5px; }
+  .row-line{ display:flex; align-items:center; gap:10px; }
+  .row-line .lab-inline{ flex:0 0 auto; min-width:60px; max-width:100px; font-size:14px; font-weight:800; color:var(--ink); line-height:1.25; }
+  .row-line .seg{ flex:1 1 auto; }
+  /* 分段控件：0 号同款网格 chip */
+  .seg{ display:grid; gap:6px; }
+  .seg.c2{ grid-template-columns:repeat(2,1fr); }
+  .seg.c4{ grid-template-columns:repeat(4,1fr); }
+  .seg.c5{ grid-template-columns:repeat(5,1fr); }
+  .seg button{ border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); border-radius:12px;
+    padding:5px 2px; font-size:13.5px; font-weight:700; min-height:40px; line-height:1.25; }
+  .seg.c5 button{ font-size:12px; }
+  .seg button small{ display:block; font-size:10.5px; font-weight:500; color:var(--ink-soft); margin-top:1px; }
+  .seg button.on{ border-color:var(--gold); background:rgba(233,161,59,.16); }
+  .seg button:active{ transform:scale(.96); }
+  /* 摘要行：0 号 look-row 同款 */
+  .look-row{ width:100%; display:flex; align-items:center; gap:10px; background:var(--chip); border:1px solid var(--panel-line);
+    border-radius:12px; padding:7px 10px; min-height:56px; text-align:left; }
+  .look-info{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .look-label{ font-size:11px; font-weight:800; letter-spacing:.08em; color:var(--ink-soft); }
+  .look-value{ font-size:15.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .look-change{ flex:0 0 auto; border:2px solid var(--gold); background:rgba(233,161,59,.16); color:var(--ink);
+    border-radius:999px; padding:6px 14px; font-size:13.5px; font-weight:800; }
+  .swatches{ display:flex; gap:8px; flex:1 1 auto; justify-content:flex-end; }
+  .swatch{ width:44px; height:44px; border-radius:50%; border:3px solid transparent; box-shadow:var(--card-shadow); flex:none; min-height:44px; padding:0; }
+  .swatch.on{ border-color:var(--gold); transform:scale(1.08); }
+  .swatch.random{ background:conic-gradient(#f6c6d3,#f9e29c,#c4e6cd,#bfe0f2,#ddd0ee,#f6c6d3);
+    font-size:19px; display:flex; align-items:center; justify-content:center; }
+  /* 主按钮：0 号 primary 同款渐变 */
+  .done-btn{ flex:0 0 auto; margin-top:10px; width:100%; border:0; border-radius:16px; padding:13px; min-height:52px;
+    font-size:17px; font-weight:900; letter-spacing:.06em; color:#fff;
+    background:linear-gradient(120deg,#ef5d3a,#e9a13b); box-shadow:0 10px 24px rgba(220,110,40,.4); }
+  .done-btn:active{ transform:scale(.98); }
+  /* 主题选择器：分页网格，一屏列完、不滚动 */
+  .picker-grid{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1fr 1fr; grid-auto-rows:1fr; gap:6px; }
+  .picker-grid button{ min-height:44px; border:2px solid var(--panel-line); background:var(--chip); color:var(--ink);
+    border-radius:12px; font-size:13.5px; font-weight:700; padding:4px 8px; line-height:1.3; text-align:left; overflow:hidden; }
+  .picker-grid button.on{ border-color:var(--gold); background:rgba(233,161,59,.18); }
+  .picker-grid button:active{ transform:scale(.96); }
+  .picker-nav{ flex:0 0 auto; display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .picker-nav button{ flex:0 0 auto; border:2px solid var(--panel-line); background:var(--chip); color:var(--ink);
+    border-radius:999px; padding:6px 18px; font-size:14px; font-weight:800; min-height:44px; }
+  .picker-nav button:disabled{ opacity:.35; }
+  .picker-nav .page-info{ flex:1; text-align:center; font-size:13px; font-weight:800; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+
+  .collect-grid{ display:flex; flex-wrap:wrap; gap:9px; justify-content:center; align-content:flex-start; padding:6px 4px; overflow:hidden; min-height:0; }
+  .collect-item{ width:64px; height:64px; background:var(--panel-solid); border:1px solid var(--panel-line); border-radius:14px;
+    box-shadow:var(--card-shadow); padding:6px; }
+  .collect-item .art{ font-size:40px; }
+  .win-title{ text-align:center; font-size:27px; font-weight:900; margin:6px 0 2px; }
+  .win-sub{ text-align:center; font-size:16px; font-weight:700; color:var(--ink-soft); }
+  .win-btns{ display:flex; gap:10px; margin-top:auto; }
+  .win-btns button{ flex:1; border-radius:16px; font-size:17px; font-weight:800; padding:12px; min-height:52px; }
+  .win-btns .again{ border:0; color:#fff; background:linear-gradient(120deg,#ef5d3a,#e9a13b); box-shadow:0 10px 24px rgba(220,110,40,.4); }
+  .win-btns .newset{ background:transparent; border:2px solid var(--panel-line); color:var(--ink); }
+
+  @media (max-height:740px){
+    .target-name{ font-size:18px; }
+    .mascot{ width:40px; height:40px; }
+    .set-list{ gap:6px; }
+    .seg button{ min-height:40px; }
+  }
+  @media (max-height:680px){
+    .panel-head{ margin-bottom:5px; min-height:40px; }
+    .panel-head h2{ font-size:19px; }
+    .picker-close{ width:40px; height:40px; min-height:40px; }
+    .set-list{ gap:5px; }
+    .set-row .lab{ margin-bottom:3px; }
+    .seg button{ min-height:36px; padding:4px 2px; font-size:12.5px; }
+    .seg button small{ display:inline; font-size:11px; margin:0 0 0 2px; }
+    .look-row{ min-height:48px; padding:5px 10px; }
+    .swatch{ width:40px; height:40px; min-height:40px; }
+    .done-btn{ min-height:48px; padding:10px; margin-top:8px; font-size:16px; }
+    .picker-grid button{ min-height:40px; font-size:12.5px; }
+    .picker-nav{ margin-top:8px; }
+    .picker-nav button{ min-height:40px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .praise.show{ animation-duration:.3s; }
+    .target-card.dance .art{ animation:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app" data-bg="cream">
+
+  <div class="topbar">
+    <div class="star-badge" id="starBadge"><span class="star-ico">⭐</span><span id="starCount">0</span></div>
+    <div class="spacer"></div>
+    <div class="round-label" id="roundLabel"></div>
+    <button class="round-btn" id="soundBtn" aria-label="sound">🔊</button>
+    <button class="round-btn" id="settingsBtn" aria-label="settings">⚙️</button>
+  </div>
+
+  <div class="theme-pill" id="themePill"></div>
+
+  <div class="target-wrap">
+    <div class="spotlight" id="spotlight"></div>
+    <div class="target-card" id="targetCard"><div class="art" id="targetArt"></div></div>
+    <div class="target-name" id="targetName"></div>
+  </div>
+
+  <div class="mascot-row">
+    <div class="mascot"><div class="art" id="mascotArt"></div></div>
+    <div class="bubble" id="mascotBubble"></div>
+  </div>
+
+  <div class="options" id="options"></div>
+  <div class="dots" id="dots"></div>
+
+  <!-- 设置：一屏排完、不滚动，顶部返回常驻 -->
+  <div class="overlay sheet-page" id="settingsPanel" role="dialog" aria-modal="true">
+    <div class="panel-head">
+      <button class="picker-close" id="settingsBack" aria-label="返回">✕</button>
+      <h2 data-i18n="settings">设置</h2>
+    </div>
+    <div class="set-list">
+      <div class="set-row">
+        <div class="lab" data-i18n="difficulty">难度</div>
+        <div class="seg c5" id="diffSeg">
+          <button data-diff="1">1<small data-i18n="d1">入门</small></button>
+          <button data-diff="2">2<small data-i18n="d2">简单</small></button>
+          <button data-diff="3">3<small data-i18n="d3">中等</small></button>
+          <button data-diff="4">4<small data-i18n="d4">困难</small></button>
+          <button data-diff="5">5<small data-i18n="d5">挑战</small></button>
+        </div>
+      </div>
+      <div class="set-row">
+        <button class="look-row" id="themeSummary">
+          <span class="look-info">
+            <span class="look-label" data-i18n="theme">图案主题</span>
+            <span class="look-value" id="themeSummaryText"></span>
+          </span>
+          <span class="look-change" data-i18n="change">更换</span>
+        </button>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="shadowStyle">影子样式</span>
+        <div class="seg c2" id="shadowSeg">
+          <button data-shadow="solid" data-i18n="solid">实心</button>
+          <button data-shadow="outline" data-i18n="outline">描边</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="rounds">一轮题数</span>
+        <div class="seg c4" id="roundsSeg">
+          <button data-rounds="6">6</button><button data-rounds="8">8</button>
+          <button data-rounds="10">10</button><button data-rounds="12">12</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="hint">答错提示</span>
+        <div class="seg c2" id="hintSeg">
+          <button data-hint="on" data-i18n="on">开</button>
+          <button data-hint="off" data-i18n="off">关</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="fx">特效</span>
+        <div class="seg c2" id="fxSeg">
+          <button data-fxset="rich" data-i18n="fxRich">丰富</button>
+          <button data-fxset="simple" data-i18n="fxSimple">简约</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="sound">音效</span>
+        <div class="seg c2" id="soundSeg">
+          <button data-sound="on" data-i18n="on">开</button>
+          <button data-sound="off" data-i18n="off">关</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="language">语言</span>
+        <div class="seg c2" id="langSeg">
+          <button data-lang="zh">中文</button>
+          <button data-lang="en">English</button>
+        </div>
+      </div>
+      <div class="set-row row-line">
+        <span class="lab-inline" data-i18n="bg">背景颜色</span>
+        <div class="swatches" id="bgSwatches">
+          <button class="swatch random" data-bgset="random" aria-label="random">🎲</button>
+          <button class="swatch" data-bgset="cream" style="background:#fdf3d8" aria-label="cream"></button>
+          <button class="swatch" data-bgset="pink" style="background:#fdeef1" aria-label="pink"></button>
+          <button class="swatch" data-bgset="sky" style="background:#e9f4fb" aria-label="sky"></button>
+          <button class="swatch" data-bgset="mint" style="background:#eaf7ee" aria-label="mint"></button>
+        </div>
+      </div>
+    </div>
+    <button class="done-btn" id="settingsDone" data-i18n="done">好了，开始玩</button>
+  </div>
+
+  <!-- 主题选择器：分页一屏列完、不滚动，顶部返回常驻 -->
+  <div class="overlay sheet-page" id="themePicker" role="dialog" aria-modal="true">
+    <div class="panel-head">
+      <button class="picker-close" id="themeBack" aria-label="返回">✕</button>
+      <h2 data-i18n="theme">图案主题</h2>
+      <span class="head-note" id="themePageNote"></span>
+    </div>
+    <div class="picker-grid" id="themeGrid"></div>
+    <div class="picker-nav">
+      <button id="themePrev" data-i18n="prevPage">上一页</button>
+      <span class="page-info" id="themePageInfo"></span>
+      <button id="themeNext" data-i18n="nextPage">下一页</button>
+    </div>
+  </div>
+
+  <!-- 整轮完成 -->
+  <div class="overlay" id="winPanel" role="dialog" aria-modal="true">
+    <div class="win-title" data-i18n="winTitle">全部配对成功！</div>
+    <div class="win-sub" id="winSub"></div>
+    <div class="collect-grid" id="collectGrid"></div>
+    <div class="win-btns">
+      <button class="again" id="againBtn" data-i18n="again">再来一轮</button>
+      <button class="newset" id="newSetBtn" data-i18n="newSet">换一组</button>
+    </div>
+  </div>
+
+  <div class="praise" id="praise"></div>
+  <div class="name-card" id="nameCard"><div class="nc-zh" id="ncZh"></div><div class="nc-en" id="ncEn"></div></div>
+  <div id="fxLayer"></div>
+  <div class="hint-banner" id="hintBanner"></div>
+</div>
+
+<script>
+"use strict";
+/* ===== 声音引擎：WebAudio 八音盒式合成音 ===== */
+const GameAudio = (() => {
+  let ctx = null, master = null, enabled = true;
+  function ac() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.16; master.connect(ctx.destination);
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+  function tone(freq, delay, dur) {
+    if (!enabled) return;
+    const c = ac(); if (!c) return;
+    const t0 = c.currentTime + (delay || 0);
+    const o = c.createOscillator(), o2 = c.createOscillator();
+    const g = c.createGain(), g2 = c.createGain();
+    o.type = "sine"; o.frequency.value = freq;
+    o2.type = "triangle"; o2.frequency.value = freq * 2; g2.gain.value = 0.22;
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0); o2.start(t0); o.stop(t0 + dur + 0.05); o2.stop(t0 + dur + 0.05);
+  }
+  return {
+    setEnabled(v) { enabled = !!v; },
+    unlock() { ac(); },
+    tap() { tone(987, 0, 0.18); },
+    soft() { tone(659, 0, 0.22); tone(523, 0.09, 0.25); },
+    good() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.07, 0.35)); },
+    win() { [523, 659, 784, 659, 880, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.11, 0.45)); }
+  };
+})();
+
+const CATS = {
+  animals:  { zh: "小动物",   en: "Animals" },
+  ocean:    { zh: "海洋",     en: "Ocean" },
+  dino:     { zh: "恐龙",     en: "Dinosaurs" },
+  space:    { zh: "太空",     en: "Space" },
+  farm:     { zh: "农场",     en: "Farm" },
+  fruitveg: { zh: "水果蔬菜", en: "Fruits & Veggies" },
+  vehicles: { zh: "交通工具", en: "Vehicles" },
+  daily:    { zh: "日常用品", en: "Everyday" },
+  food:     { zh: "食物",     en: "Food" },
+  clothes:  { zh: "身体与衣服", en: "Clothes" },
+  music:    { zh: "音乐",     en: "Music" },
+  sports:   { zh: "运动",     en: "Sports" },
+  nature:   { zh: "自然",     en: "Nature" }
+};
+const SCENES = {
+  road:   { zh: "马路", en: "Road" },
+  rail:   { zh: "铁轨", en: "Railway" },
+  sky:    { zh: "天空", en: "Sky" },
+  water:  { zh: "水里", en: "Water" },
+  space:  { zh: "太空", en: "Space" },
+  pond:   { zh: "池塘", en: "Pond" },
+  farm:   { zh: "农场", en: "Farm" },
+  forest: { zh: "森林", en: "Forest" },
+  garden: { zh: "花园", en: "Garden" }
+};
+const S = inner => '<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="#7a5c3e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' + inner + "</g></svg>";
+
+const ASSETS = [
+  /* ---------- SVG 绘本插画（30 幅） ---------- */
+  { id:"cat", zh:"小猫", en:"Cat", cat:"animals", eats:"fish", svg:S('<polygon points="27,36 25,15 45,25" fill="#f7b267"/><polygon points="73,36 75,15 55,25" fill="#f7b267"/><circle cx="50" cy="57" r="26" fill="#f7b267"/><circle cx="40" cy="54" r="3.2" fill="#5b4632" stroke="none"/><circle cx="60" cy="54" r="3.2" fill="#5b4632" stroke="none"/><path d="M45 63 Q50 60 55 63 Q50 68 45 63Z" fill="#e87a90" stroke="none"/><path d="M50 66 Q46 70 42 68 M50 66 Q54 70 58 68 M16 58 H31 M18 67 L32 63 M84 58 H69 M82 67 L68 63" fill="none"/>') },
+  { id:"rabbit", zh:"小兔", en:"Rabbit", cat:"animals", eats:"carrot", svg:S('<ellipse cx="36" cy="24" rx="8" ry="17" fill="#fdf3ec" transform="rotate(-8 36 24)"/><ellipse cx="64" cy="24" rx="8" ry="17" fill="#fdf3ec" transform="rotate(8 64 24)"/><ellipse cx="36" cy="26" rx="3.6" ry="10" fill="#f6c6d3" stroke="none" transform="rotate(-8 36 26)"/><ellipse cx="64" cy="26" rx="3.6" ry="10" fill="#f6c6d3" stroke="none" transform="rotate(8 64 26)"/><circle cx="50" cy="62" r="24" fill="#fdf3ec"/><circle cx="41" cy="58" r="3" fill="#5b4632" stroke="none"/><circle cx="59" cy="58" r="3" fill="#5b4632" stroke="none"/><path d="M46 66 Q50 63 54 66 Q50 70 46 66Z" fill="#e87a90" stroke="none"/><path d="M50 69 V73 M44 76 Q50 79 56 76" fill="none"/><circle cx="33" cy="68" r="4" fill="#f6c6d3" stroke="none" opacity=".7"/><circle cx="67" cy="68" r="4" fill="#f6c6d3" stroke="none" opacity=".7"/>') },
+  { id:"bear", zh:"小熊", en:"Bear", cat:"animals", eats:"strawberry", svg:S('<circle cx="28" cy="30" r="10" fill="#d9a066"/><circle cx="72" cy="30" r="10" fill="#d9a066"/><circle cx="28" cy="30" r="4.6" fill="#f3ddba" stroke="none"/><circle cx="72" cy="30" r="4.6" fill="#f3ddba" stroke="none"/><circle cx="50" cy="56" r="27" fill="#d9a066"/><ellipse cx="50" cy="66" rx="12" ry="9" fill="#f3ddba"/><ellipse cx="50" cy="61" rx="4.6" ry="3.4" fill="#5b4632" stroke="none"/><path d="M50 64 V68 M50 68 Q46 71 43 69 M50 68 Q54 71 57 69" fill="none"/><circle cx="39" cy="50" r="3" fill="#5b4632" stroke="none"/><circle cx="61" cy="50" r="3" fill="#5b4632" stroke="none"/>') },
+  { id:"frog", zh:"青蛙", en:"Frog", cat:"animals", scene:"pond", svg:S('<circle cx="33" cy="36" r="10" fill="#a5d66d"/><circle cx="67" cy="36" r="10" fill="#a5d66d"/><circle cx="33" cy="36" r="5.6" fill="#fff"/><circle cx="67" cy="36" r="5.6" fill="#fff"/><circle cx="33" cy="37" r="2.8" fill="#5b4632" stroke="none"/><circle cx="67" cy="37" r="2.8" fill="#5b4632" stroke="none"/><ellipse cx="50" cy="62" rx="29" ry="23" fill="#a5d66d"/><path d="M36 64 Q50 76 64 64" fill="none"/><circle cx="30" cy="66" r="4.4" fill="#f6c6d3" stroke="none" opacity=".8"/><circle cx="70" cy="66" r="4.4" fill="#f6c6d3" stroke="none" opacity=".8"/>') },
+  { id:"triceratops", zh:"三角龙", en:"Triceratops", cat:"dino", svg:S('<ellipse cx="42" cy="64" rx="24" ry="15" fill="#9db8dd"/><path d="M20 60 L6 50 L10 70 L22 70Z" fill="#9db8dd"/><rect x="30" y="74" width="8" height="10" rx="3" fill="#9db8dd"/><rect x="52" y="74" width="8" height="10" rx="3" fill="#9db8dd"/><circle cx="72" cy="46" r="17" fill="#b9cfe8"/><circle cx="72" cy="52" r="11.5" fill="#9db8dd"/><polygon points="72,26 68,38 76,38" fill="#fff7e6"/><polygon points="60,34 62,44 68,40" fill="#fff7e6"/><polygon points="84,34 82,44 76,40" fill="#fff7e6"/><circle cx="76" cy="50" r="2.6" fill="#5b4632" stroke="none"/><circle cx="68" cy="58" r="1.6" fill="#5b4632" stroke="none"/>') },
+  { id:"sauropod", zh:"雷龙", en:"Brontosaurus", cat:"dino", svg:S('<path d="M62 58 Q78 52 80 30 Q81 20 74 16" fill="none" stroke="#a8c686" stroke-width="11"/><ellipse cx="42" cy="64" rx="25" ry="15" fill="#a8c686"/><path d="M18 60 Q6 56 4 44" fill="none" stroke="#a8c686" stroke-width="7"/><rect x="28" y="74" width="8" height="11" rx="3" fill="#a8c686"/><rect x="50" y="74" width="8" height="11" rx="3" fill="#a8c686"/><circle cx="73" cy="15" r="7.5" fill="#a8c686"/><circle cx="75" cy="14" r="1.8" fill="#5b4632" stroke="none"/><circle cx="42" cy="60" r="5" fill="#8fb573" stroke="none" opacity=".7"/>') },
+  { id:"pterosaur", zh:"翼龙", en:"Pterodactyl", cat:"dino", scene:"sky", svg:S('<path d="M48 52 L10 34 Q24 58 44 62Z" fill="#c3a6dd"/><path d="M52 52 L90 34 Q76 58 56 62Z" fill="#c3a6dd"/><ellipse cx="50" cy="58" rx="10" ry="15" fill="#b28fd1"/><circle cx="50" cy="36" r="9" fill="#b28fd1"/><polygon points="57,32 82,38 57,41" fill="#f2b04e"/><path d="M44 30 Q40 20 34 18 Q44 20 48 27Z" fill="#ef8f7a"/><circle cx="52" cy="35" r="2.2" fill="#5b4632" stroke="none"/><path d="M45 72 L42 80 M55 72 L58 80" fill="none"/>') },
+  { id:"trex", zh:"霸王龙", en:"T-Rex", cat:"dino", svg:S('<ellipse cx="40" cy="64" rx="23" ry="16" fill="#8fbf6f"/><path d="M18 62 L4 52 L8 74 L20 72Z" fill="#8fbf6f"/><path d="M58 30 Q84 26 86 42 Q87 52 74 54 L60 52 Q52 40 58 30Z" fill="#8fbf6f"/><path d="M62 52 L84 52 L82 60 L64 58Z" fill="#8fbf6f"/><polygon points="66,53 69,58 72,53" fill="#fff"/><polygon points="74,53 77,58 80,53" fill="#fff"/><circle cx="72" cy="38" r="2.8" fill="#5b4632" stroke="none"/><path d="M52 58 Q60 62 58 68" fill="none"/><rect x="30" y="74" width="9" height="11" rx="3" fill="#8fbf6f"/><rect x="50" y="74" width="9" height="11" rx="3" fill="#8fbf6f"/>') },
+  { id:"octopus", zh:"章鱼", en:"Octopus", cat:"ocean", eats:"crab", scene:"water", svg:S('<path d="M24 54 Q24 26 50 26 Q76 26 76 54 Q76 62 68 60 Q64 66 58 60 Q52 66 46 60 Q40 66 34 60 Q26 62 24 54Z" fill="#e8a2c8"/><circle cx="28" cy="66" r="7" fill="#e8a2c8"/><circle cx="43" cy="70" r="7" fill="#e8a2c8"/><circle cx="58" cy="70" r="7" fill="#e8a2c8"/><circle cx="72" cy="66" r="7" fill="#e8a2c8"/><circle cx="41" cy="46" r="3" fill="#5b4632" stroke="none"/><circle cx="59" cy="46" r="3" fill="#5b4632" stroke="none"/><path d="M44 54 Q50 58 56 54" fill="none"/><circle cx="35" cy="36" r="3" fill="#f6c6d3" stroke="none"/><circle cx="63" cy="33" r="2.4" fill="#f6c6d3" stroke="none"/>') },
+  { id:"whale", zh:"鲸鱼", en:"Whale", cat:"ocean", eats:"shrimp", scene:"water", svg:S('<path d="M12 58 Q16 36 48 34 Q76 33 84 50 L94 38 Q97 52 93 64 L84 58 Q74 74 46 74 Q18 74 12 58Z" fill="#7fb2dd"/><path d="M20 62 Q40 70 66 64 Q50 73 38 71 Q24 69 20 62Z" fill="#cfe7f7" stroke="none"/><circle cx="34" cy="50" r="3" fill="#5b4632" stroke="none"/><path d="M56 44 Q62 48 68 45" fill="none"/><path d="M48 26 Q46 18 40 16 M52 25 Q54 16 60 14 M50 24 V14" fill="none" stroke="#7fb2dd"/>') },
+  { id:"crab", zh:"螃蟹", en:"Crab", cat:"ocean", scene:"water", svg:S('<path d="M18 44 Q8 34 14 26 Q24 22 28 32 Q30 42 24 46Z" fill="#f28c6b"/><path d="M82 44 Q92 34 86 26 Q76 22 72 32 Q70 42 76 46Z" fill="#f28c6b"/><ellipse cx="50" cy="60" rx="25" ry="16" fill="#f28c6b"/><path d="M40 46 V38 M60 46 V38" fill="none"/><circle cx="40" cy="35" r="5" fill="#fff"/><circle cx="60" cy="35" r="5" fill="#fff"/><circle cx="40" cy="36" r="2.4" fill="#5b4632" stroke="none"/><circle cx="60" cy="36" r="2.4" fill="#5b4632" stroke="none"/><path d="M42 62 Q50 67 58 62" fill="none"/><path d="M26 68 L14 74 M27 60 L14 58 M74 68 L86 74 M73 60 L86 58" fill="none"/>') },
+  { id:"fish", zh:"小鱼", en:"Fish", cat:"ocean", scene:"water", svg:S('<path d="M62 52 L86 36 Q90 52 86 68 L62 54Z" fill="#f28c4b"/><ellipse cx="42" cy="52" rx="26" ry="17" fill="#ffb84d"/><path d="M38 36 Q46 28 54 35 Q46 40 38 36Z" fill="#f28c4b"/><circle cx="30" cy="50" r="4" fill="#fff"/><circle cx="29" cy="50" r="2.2" fill="#5b4632" stroke="none"/><path d="M48 40 Q52 52 48 64 M58 42 Q61 52 58 62" fill="none" stroke="#f28c4b"/><path d="M16 56 Q20 58 24 56" fill="none"/>') },
+  { id:"turtle", zh:"海龟", en:"Turtle", cat:"ocean", scene:"water", svg:S('<path d="M22 66 Q24 40 50 40 Q76 40 78 66Z" fill="#7fb069"/><circle cx="38" cy="54" r="5.4" fill="#679552" stroke="none" opacity=".8"/><circle cx="56" cy="48" r="4.4" fill="#679552" stroke="none" opacity=".8"/><circle cx="60" cy="60" r="5" fill="#679552" stroke="none" opacity=".8"/><path d="M16 66 H84" fill="none"/><ellipse cx="20" cy="70" rx="8" ry="4.6" fill="#a5d66d"/><ellipse cx="80" cy="70" rx="8" ry="4.6" fill="#a5d66d"/><circle cx="86" cy="56" r="8" fill="#a5d66d"/><circle cx="88" cy="54" r="1.8" fill="#5b4632" stroke="none"/>') },
+  { id:"rocket", zh:"火箭", en:"Rocket", cat:"space", scene:"space", svg:S('<path d="M50 8 Q64 24 64 48 L64 58 L36 58 L36 48 Q36 24 50 8Z" fill="#fdf3ec"/><circle cx="50" cy="36" r="8" fill="#7fb2dd"/><path d="M36 50 Q24 58 24 72 L36 64Z" fill="#ef8f7a"/><path d="M64 50 Q76 58 76 72 L64 64Z" fill="#ef8f7a"/><rect x="42" y="58" width="16" height="6" fill="#ef8f7a"/><path d="M42 68 Q50 88 58 68 Q54 74 50 74 Q46 74 42 68Z" fill="#ffb84d"/><circle cx="50" cy="36" r="3" fill="#cfe7f7" stroke="none"/>') },
+  { id:"planet", zh:"星球", en:"Planet", cat:"space", scene:"space", svg:S('<circle cx="50" cy="50" r="21" fill="#c3a6dd"/><ellipse cx="50" cy="54" rx="36" ry="10" fill="none" stroke="#f2b04e" stroke-width="5" transform="rotate(-14 50 54)"/><circle cx="43" cy="44" r="4.4" fill="#b28fd1" stroke="none"/><circle cx="58" cy="56" r="3.4" fill="#b28fd1" stroke="none"/><circle cx="40" cy="55" r="2.4" fill="#b28fd1" stroke="none"/>') },
+  { id:"moon", zh:"月亮", en:"Moon", cat:"space", scene:"space", svg:S('<path d="M64 12 A38 38 0 1 0 64 88 A30 38 0 1 1 64 12Z" fill="#f7d774"/><path d="M76 20 L78 27 L85 29 L78 31 L76 38 L74 31 L67 29 L74 27Z" fill="#f2b04e"/><circle cx="42" cy="44" r="2.2" fill="#5b4632" stroke="none"/><path d="M38 57 Q43 60 48 57" fill="none"/>') },
+  { id:"cow", zh:"奶牛", en:"Cow", cat:"farm", eats:"apple", scene:"farm", svg:S('<ellipse cx="18" cy="44" rx="8" ry="5" fill="#f6c6d3" transform="rotate(-24 18 44)"/><ellipse cx="82" cy="44" rx="8" ry="5" fill="#f6c6d3" transform="rotate(24 82 44)"/><path d="M32 26 Q28 16 20 14 M68 26 Q72 16 80 14" fill="none" stroke="#e8c98a" stroke-width="5"/><rect x="26" y="24" width="48" height="56" rx="18" fill="#fdf3ec"/><path d="M30 34 Q38 28 44 34 Q36 42 30 40Z" fill="#b08968" stroke="none" opacity=".75"/><ellipse cx="50" cy="66" rx="15" ry="10" fill="#f6c6d3"/><circle cx="44" cy="66" r="2" fill="#5b4632" stroke="none"/><circle cx="56" cy="66" r="2" fill="#5b4632" stroke="none"/><circle cx="39" cy="48" r="3" fill="#5b4632" stroke="none"/><circle cx="61" cy="48" r="3" fill="#5b4632" stroke="none"/>') },
+  { id:"pig", zh:"小猪", en:"Pig", cat:"farm", eats:"corn", scene:"farm", svg:S('<polygon points="30,32 28,16 44,24" fill="#f7b1c4"/><polygon points="70,32 72,16 56,24" fill="#f7b1c4"/><circle cx="50" cy="56" r="27" fill="#f7b1c4"/><ellipse cx="50" cy="62" rx="11" ry="8" fill="#ef8fab"/><circle cx="46" cy="62" r="2" fill="#5b4632" stroke="none"/><circle cx="54" cy="62" r="2" fill="#5b4632" stroke="none"/><circle cx="39" cy="48" r="3" fill="#5b4632" stroke="none"/><circle cx="61" cy="48" r="3" fill="#5b4632" stroke="none"/><circle cx="31" cy="62" r="4" fill="#ef8fab" stroke="none" opacity=".6"/><circle cx="69" cy="62" r="4" fill="#ef8fab" stroke="none" opacity=".6"/>') },
+  { id:"chick", zh:"小鸡", en:"Chick", cat:"farm", mom:"hen", eats:"corn", scene:"farm", svg:S('<path d="M44 24 Q46 14 52 18 Q50 24 54 28" fill="none" stroke="#f2b04e"/><circle cx="50" cy="58" r="25" fill="#f7d774"/><ellipse cx="30" cy="62" rx="7" ry="10" fill="#f2c14e" transform="rotate(18 30 62)"/><ellipse cx="70" cy="62" rx="7" ry="10" fill="#f2c14e" transform="rotate(-18 70 62)"/><circle cx="41" cy="52" r="3" fill="#5b4632" stroke="none"/><circle cx="59" cy="52" r="3" fill="#5b4632" stroke="none"/><polygon points="50,56 44,61 50,66 56,61" fill="#f28c4b"/><path d="M42 84 L42 89 M58 84 L58 89" fill="none" stroke="#f28c4b"/>') },
+  { id:"duck", zh:"鸭子", en:"Duck", cat:"farm", scene:"pond", svg:S('<ellipse cx="44" cy="66" rx="27" ry="16" fill="#fdf3ec"/><circle cx="70" cy="42" r="14" fill="#fdf3ec"/><ellipse cx="84" cy="46" rx="9" ry="5" fill="#f2b04e"/><circle cx="73" cy="40" r="2.6" fill="#5b4632" stroke="none"/><path d="M30 62 Q44 54 54 62 Q44 70 30 62Z" fill="#f6e3c8"/><path d="M18 62 L8 56 L12 68Z" fill="#fdf3ec"/>') },
+  { id:"apple", zh:"苹果", en:"Apple", cat:"fruitveg", svg:S('<path d="M50 34 Q58 22 74 28 Q88 34 84 52 Q80 74 64 80 Q56 83 50 78 Q44 83 36 80 Q20 74 16 52 Q12 34 26 28 Q42 22 50 34Z" fill="#ef8f7a"/><path d="M50 32 Q50 22 58 16" fill="none" stroke="#8a6d4f" stroke-width="3.4"/><ellipse cx="66" cy="22" rx="9" ry="5" fill="#7fb069" transform="rotate(-24 66 22)"/><ellipse cx="34" cy="46" rx="5" ry="8" fill="#fff" stroke="none" opacity=".35" transform="rotate(-16 34 46)"/>') },
+  { id:"strawberry", zh:"草莓", en:"Strawberry", cat:"fruitveg", svg:S('<path d="M50 88 Q26 70 24 50 Q23 34 38 32 L62 32 Q77 34 76 50 Q74 70 50 88Z" fill="#ef8f7a"/><path d="M24 34 Q36 22 50 30 Q64 22 76 34 Q64 38 50 34 Q36 38 24 34Z" fill="#7fb069"/><path d="M50 30 L50 20" fill="none" stroke="#7fb069" stroke-width="3.4"/><ellipse cx="40" cy="50" rx="2" ry="3" fill="#ffe9a8" stroke="none"/><ellipse cx="58" cy="46" rx="2" ry="3" fill="#ffe9a8" stroke="none"/><ellipse cx="50" cy="62" rx="2" ry="3" fill="#ffe9a8" stroke="none"/><ellipse cx="38" cy="66" rx="2" ry="3" fill="#ffe9a8" stroke="none"/><ellipse cx="62" cy="62" rx="2" ry="3" fill="#ffe9a8" stroke="none"/>') },
+  { id:"watermelon", zh:"西瓜", en:"Watermelon", cat:"fruitveg", svg:S('<path d="M14 40 A36 36 0 0 0 86 40Z" fill="#7fb069"/><path d="M20 40 A30 30 0 0 0 80 40Z" fill="#fdf3ec" stroke="none"/><path d="M25 40 A25 25 0 0 0 75 40Z" fill="#ef8f7a" stroke="none"/><ellipse cx="42" cy="52" rx="2" ry="3" fill="#5b4632" stroke="none"/><ellipse cx="56" cy="56" rx="2" ry="3" fill="#5b4632" stroke="none"/><ellipse cx="50" cy="46" rx="2" ry="3" fill="#5b4632" stroke="none"/><ellipse cx="64" cy="48" rx="2" ry="3" fill="#5b4632" stroke="none"/>') },
+  { id:"banana", zh:"香蕉", en:"Banana", cat:"fruitveg", svg:S('<path d="M26 18 Q24 52 52 68 Q68 77 84 74 Q62 84 40 66 Q22 50 26 18Z" fill="#f7d774"/><path d="M34 26 Q34 50 54 62" fill="none" stroke="#e8bd45"/><path d="M26 18 L24 12" fill="none" stroke="#8a6d4f" stroke-width="3.4"/>') },
+  { id:"carrot", zh:"胡萝卜", en:"Carrot", cat:"fruitveg", svg:S('<path d="M38 36 L62 36 L52 82 Q50 88 48 82Z" fill="#f28c4b"/><path d="M50 34 Q44 20 34 16 M52 34 Q54 18 64 12 M48 34 Q48 20 42 10" fill="none" stroke="#7fb069" stroke-width="4"/><path d="M42 50 H54 M44 64 H53" fill="none" stroke="#d9732f"/>') },
+  { id:"car", zh:"汽车", en:"Car", cat:"vehicles", scene:"road", svg:S('<path d="M14 62 Q14 50 26 48 L34 34 Q36 30 42 30 L60 30 Q66 30 69 36 L75 48 Q86 50 86 62 L86 68 L14 68Z" fill="#f28c7a"/><path d="M38 36 L46 36 L46 47 L32 47 Q34 40 38 36Z" fill="#bfe3f2"/><path d="M50 36 L60 36 Q64 40 67 47 L50 47Z" fill="#bfe3f2"/><circle cx="31" cy="69" r="8" fill="#5b4632"/><circle cx="69" cy="69" r="8" fill="#5b4632"/><circle cx="31" cy="69" r="3.4" fill="#fdf3ec" stroke="none"/><circle cx="69" cy="69" r="3.4" fill="#fdf3ec" stroke="none"/><circle cx="82" cy="56" r="2.6" fill="#f7d774" stroke="none"/>') },
+  { id:"bus", zh:"公交车", en:"Bus", cat:"vehicles", scene:"road", svg:S('<rect x="14" y="24" width="72" height="46" rx="9" fill="#f5bd60"/><rect x="20" y="32" width="12" height="12" rx="2" fill="#bfe3f2"/><rect x="37" y="32" width="12" height="12" rx="2" fill="#bfe3f2"/><rect x="54" y="32" width="12" height="12" rx="2" fill="#bfe3f2"/><rect x="70" y="32" width="10" height="26" rx="2" fill="#e8a33d"/><path d="M14 52 H86" fill="none" stroke="#e8a33d"/><circle cx="32" cy="71" r="8" fill="#5b4632"/><circle cx="68" cy="71" r="8" fill="#5b4632"/><circle cx="32" cy="71" r="3.4" fill="#fdf3ec" stroke="none"/><circle cx="68" cy="71" r="3.4" fill="#fdf3ec" stroke="none"/>') },
+  { id:"train", zh:"火车", en:"Train", cat:"vehicles", scene:"rail", svg:S('<circle cx="34" cy="16" r="6" fill="#e8e4da" stroke="none" opacity=".9"/><circle cx="46" cy="10" r="4.4" fill="#e8e4da" stroke="none" opacity=".9"/><rect x="26" y="22" width="10" height="14" fill="#5b4632"/><rect x="16" y="36" width="46" height="30" rx="5" fill="#7fb2dd"/><rect x="62" y="24" width="24" height="42" rx="5" fill="#ef8f7a"/><rect x="67" y="30" width="13" height="12" rx="2" fill="#bfe3f2"/><circle cx="28" cy="48" r="5" fill="#bfe3f2"/><path d="M12 66 L90 66" fill="none" stroke="#8a6d4f" stroke-width="3.4"/><circle cx="32" cy="70" r="7" fill="#5b4632"/><circle cx="56" cy="70" r="7" fill="#5b4632"/><circle cx="76" cy="70" r="7" fill="#5b4632"/>') },
+  { id:"plane", zh:"飞机", en:"Airplane", cat:"vehicles", scene:"sky", svg:S('<path d="M8 54 Q8 44 22 43 L64 40 Q88 39 90 48 Q91 57 68 59 L24 61 Q8 61 8 54Z" fill="#fdf3ec"/><path d="M44 44 L30 26 Q29 22 34 23 L52 25 L56 42Z" fill="#ef8f7a"/><path d="M46 59 L36 74 Q35 78 40 77 L54 74 L58 60Z" fill="#ef8f7a"/><path d="M84 42 L92 30 Q94 27 96 31 L95 45 Q90 44 84 42Z" fill="#ef8f7a"/><circle cx="34" cy="50" r="3" fill="#7fb2dd" stroke="none"/><circle cx="46" cy="49" r="3" fill="#7fb2dd" stroke="none"/><circle cx="58" cy="48" r="3" fill="#7fb2dd" stroke="none"/>') },
+  { id:"boat", zh:"小船", en:"Boat", cat:"vehicles", scene:"water", svg:S('<path d="M16 64 L84 64 L76 80 L26 80Z" fill="#b08968"/><path d="M50 62 L50 20" fill="none" stroke="#8a6d4f" stroke-width="3.4"/><path d="M54 24 L54 58 L78 58Z" fill="#fdf3ec"/><path d="M46 34 L46 58 L28 58Z" fill="#f6c6d3"/><path d="M50 20 L64 24 L50 28Z" fill="#ef8f7a"/><path d="M8 88 Q16 84 24 88 Q32 92 40 88 Q48 84 56 88 Q64 92 72 88 Q80 84 88 88" fill="none" stroke="#7fb2dd" stroke-width="3.4"/>') },
+  /* ---------- emoji 补足（48 个） ---------- */
+  { id:"lion", zh:"狮子", en:"Lion", cat:"animals", scene:"forest", emoji:"🦁" },
+  { id:"tiger", zh:"老虎", en:"Tiger", cat:"animals", scene:"forest", emoji:"🐯" },
+  { id:"elephant", zh:"大象", en:"Elephant", cat:"animals", eats:"banana", emoji:"🐘" },
+  { id:"monkey", zh:"猴子", en:"Monkey", cat:"animals", eats:"banana", emoji:"🐵" },
+  { id:"fox", zh:"狐狸", en:"Fox", cat:"animals", scene:"forest", emoji:"🦊" },
+  { id:"panda", zh:"熊猫", en:"Panda", cat:"animals", scene:"forest", emoji:"🐼" },
+  { id:"penguin", zh:"企鹅", en:"Penguin", cat:"animals", scene:"water", emoji:"🐧" },
+  { id:"dog", zh:"狗狗", en:"Dog", cat:"animals", baby:"puppy", emoji:"🐕" },
+  { id:"puppy", zh:"小狗", en:"Puppy", cat:"animals", mom:"dog", emoji:"🐶" },
+  { id:"kitten", zh:"小猫咪", en:"Kitten", cat:"animals", mom:"cat", emoji:"🐱" },
+  { id:"dolphin", zh:"海豚", en:"Dolphin", cat:"ocean", scene:"water", emoji:"🐬" },
+  { id:"shark", zh:"鲨鱼", en:"Shark", cat:"ocean", scene:"water", emoji:"🦈" },
+  { id:"squid", zh:"乌贼", en:"Squid", cat:"ocean", scene:"water", emoji:"🦑" },
+  { id:"shrimp", zh:"小虾", en:"Shrimp", cat:"ocean", scene:"water", emoji:"🦐" },
+  { id:"sun", zh:"太阳", en:"Sun", cat:"space", scene:"sky", emoji:"🌞" },
+  { id:"star", zh:"星星", en:"Star", cat:"space", scene:"space", emoji:"🌟" },
+  { id:"earth", zh:"地球", en:"Earth", cat:"space", scene:"space", emoji:"🌍" },
+  { id:"rainbow", zh:"彩虹", en:"Rainbow", cat:"space", scene:"sky", emoji:"🌈" },
+  { id:"horse", zh:"小马", en:"Horse", cat:"farm", scene:"farm", emoji:"🐴" },
+  { id:"sheep", zh:"绵羊", en:"Sheep", cat:"farm", scene:"farm", emoji:"🐑" },
+  { id:"goat", zh:"山羊", en:"Goat", cat:"farm", scene:"farm", emoji:"🐐" },
+  { id:"hen", zh:"母鸡", en:"Hen", cat:"farm", baby:"chick", scene:"farm", emoji:"🐔" },
+  { id:"corn", zh:"玉米", en:"Corn", cat:"fruitveg", emoji:"🌽" },
+  { id:"pumpkin", zh:"南瓜", en:"Pumpkin", cat:"fruitveg", emoji:"🎃" },
+  { id:"grapes", zh:"葡萄", en:"Grapes", cat:"fruitveg", emoji:"🍇" },
+  { id:"orange", zh:"橙子", en:"Orange", cat:"fruitveg", emoji:"🍊" },
+  { id:"peach", zh:"桃子", en:"Peach", cat:"fruitveg", emoji:"🍑" },
+  { id:"pineapple", zh:"菠萝", en:"Pineapple", cat:"fruitveg", emoji:"🍍" },
+  { id:"tomato", zh:"番茄", en:"Tomato", cat:"fruitveg", emoji:"🍅" },
+  { id:"truck", zh:"卡车", en:"Truck", cat:"vehicles", scene:"road", emoji:"🚚" },
+  { id:"firetruck", zh:"消防车", en:"Fire Truck", cat:"vehicles", scene:"road", emoji:"🚒" },
+  { id:"ambulance", zh:"救护车", en:"Ambulance", cat:"vehicles", scene:"road", emoji:"🚑" },
+  { id:"bicycle", zh:"自行车", en:"Bicycle", cat:"vehicles", scene:"road", emoji:"🚲" },
+  { id:"helicopter", zh:"直升机", en:"Helicopter", cat:"vehicles", scene:"sky", emoji:"🚁" },
+  { id:"pencil", zh:"铅笔", en:"Pencil", cat:"daily", emoji:"✏️" },
+  { id:"book", zh:"书", en:"Book", cat:"daily", emoji:"📖" },
+  { id:"balloon", zh:"气球", en:"Balloon", cat:"daily", emoji:"🎈" },
+  { id:"soccer", zh:"足球", en:"Soccer Ball", cat:"daily", emoji:"⚽" },
+  { id:"gift", zh:"礼物", en:"Gift", cat:"daily", emoji:"🎁" },
+  { id:"bread", zh:"面包", en:"Bread", cat:"food", emoji:"🍞" },
+  { id:"icecream", zh:"冰淇淋", en:"Ice Cream", cat:"food", emoji:"🍦" },
+  { id:"cake", zh:"蛋糕", en:"Cake", cat:"food", emoji:"🍰" },
+  { id:"cookie", zh:"饼干", en:"Cookie", cat:"food", emoji:"🍪" },
+  { id:"tshirt", zh:"T恤", en:"T-Shirt", cat:"clothes", emoji:"👕" },
+  { id:"dress", zh:"裙子", en:"Dress", cat:"clothes", emoji:"👗" },
+  { id:"cap", zh:"帽子", en:"Cap", cat:"clothes", emoji:"🧢" },
+  { id:"shoe", zh:"鞋子", en:"Shoe", cat:"clothes", emoji:"👟" },
+  { id:"socks", zh:"袜子", en:"Socks", cat:"clothes", emoji:"🧦" }
+];
+/* ---------- 精选素材扩容（第二批：新增 SVG 插画 + 带关系标签的 emoji） ---------- */
+const ASSETS_MORE = [
+  { id:"giraffe", zh:"长颈鹿", en:"Giraffe", cat:"animals", eats:"leaf", scene:"forest", svg:S('<path d="M58 62 L66 30 Q67 22 60 20 L52 22 Q46 24 47 32 L50 62Z" fill="#f7cf6b"/><ellipse cx="38" cy="66" rx="22" ry="14" fill="#f7cf6b"/><rect x="24" y="76" width="7" height="10" rx="3" fill="#f7cf6b"/><rect x="46" y="76" width="7" height="10" rx="3" fill="#f7cf6b"/><path d="M16 62 Q6 58 5 48" fill="none" stroke="#f7cf6b" stroke-width="6"/><circle cx="62" cy="18" r="8" fill="#f7cf6b"/><path d="M58 11 L56 5 M66 11 L68 5" fill="none" stroke="#b08968" stroke-width="3.4"/><circle cx="64" cy="17" r="1.8" fill="#5b4632" stroke="none"/><circle cx="38" cy="62" r="4" fill="#d9a441" stroke="none" opacity=".8"/><circle cx="28" cy="70" r="3" fill="#d9a441" stroke="none" opacity=".8"/><circle cx="48" cy="70" r="3.4" fill="#d9a441" stroke="none" opacity=".8"/>') },
+  { id:"zebra", zh:"斑马", en:"Zebra", cat:"animals", scene:"forest", svg:S('<ellipse cx="46" cy="62" rx="26" ry="16" fill="#fdf3ec"/><path d="M66 52 L74 34 Q76 28 70 27 L64 30 Q60 34 62 44Z" fill="#fdf3ec"/><ellipse cx="76" cy="30" rx="7" ry="9" fill="#fdf3ec" transform="rotate(24 76 30)"/><path d="M62 30 Q60 22 64 16" fill="none" stroke="#5b4632" stroke-width="4"/><path d="M34 48 L32 74 M44 46 L44 76 M56 48 L58 74" fill="none" stroke="#5b4632" stroke-width="3.4"/><rect x="30" y="74" width="7" height="11" rx="3" fill="#fdf3ec"/><rect x="56" y="74" width="7" height="11" rx="3" fill="#fdf3ec"/><path d="M20 58 Q10 54 9 44" fill="none" stroke="#5b4632" stroke-width="4"/><circle cx="72" cy="28" r="1.8" fill="#5b4632" stroke="none"/>') },
+  { id:"kangaroo", zh:"袋鼠", en:"Kangaroo", cat:"animals", scene:"forest", svg:S('<ellipse cx="44" cy="66" rx="20" ry="17" fill="#d9a066"/><path d="M58 52 Q66 40 64 28" fill="none" stroke="#d9a066" stroke-width="9"/><ellipse cx="65" cy="22" rx="7" ry="9" fill="#d9a066" transform="rotate(16 65 22)"/><ellipse cx="56" cy="20" rx="4" ry="8" fill="#d9a066" transform="rotate(-14 56 20)"/><path d="M34 66 Q44 58 54 66 Q50 78 40 76 Q34 72 34 66Z" fill="#f3ddba"/><circle cx="50" cy="60" r="6" fill="#d9a066"/><circle cx="48" cy="58" r="1.4" fill="#5b4632" stroke="none"/><circle cx="52" cy="58" r="1.4" fill="#5b4632" stroke="none"/><path d="M26 80 Q14 84 8 80 M52 82 Q64 86 74 82" fill="none" stroke="#d9a066" stroke-width="5"/><circle cx="66" cy="21" r="1.7" fill="#5b4632" stroke="none"/>') },
+  { id:"deer", zh:"小鹿", en:"Deer", cat:"animals", eats:"leaf", scene:"forest", svg:S('<path d="M34 26 Q28 14 20 12 M34 26 Q36 12 30 6 M66 26 Q72 14 80 12 M66 26 Q64 12 70 6" fill="none" stroke="#b08968" stroke-width="3.4"/><ellipse cx="26" cy="34" rx="7" ry="4.6" fill="#e0aa7e" transform="rotate(-30 26 34)"/><ellipse cx="74" cy="34" rx="7" ry="4.6" fill="#e0aa7e" transform="rotate(30 74 34)"/><circle cx="50" cy="56" r="26" fill="#e0aa7e"/><ellipse cx="50" cy="66" rx="11" ry="8.4" fill="#f7e3c8"/><ellipse cx="50" cy="62" rx="4.2" ry="3" fill="#5b4632" stroke="none"/><circle cx="39" cy="50" r="3" fill="#5b4632" stroke="none"/><circle cx="61" cy="50" r="3" fill="#5b4632" stroke="none"/><circle cx="34" cy="40" r="2.4" fill="#fff" stroke="none" opacity=".8"/><circle cx="64" cy="44" r="2" fill="#fff" stroke="none" opacity=".8"/><circle cx="58" cy="36" r="1.8" fill="#fff" stroke="none" opacity=".8"/>') },
+  { id:"squirrel", zh:"松鼠", en:"Squirrel", cat:"animals", eats:"peanut", scene:"forest", svg:S('<path d="M66 78 Q88 70 84 44 Q82 26 68 22 Q80 40 72 56 Q66 68 58 72Z" fill="#c97e4f"/><ellipse cx="44" cy="64" rx="19" ry="18" fill="#e09a5f"/><ellipse cx="44" cy="68" rx="10" ry="11" fill="#f7e3c8"/><circle cx="44" cy="38" r="13" fill="#e09a5f"/><polygon points="34,30 32,18 42,24" fill="#e09a5f"/><polygon points="54,30 56,18 46,24" fill="#e09a5f"/><circle cx="39" cy="37" r="2.2" fill="#5b4632" stroke="none"/><circle cx="49" cy="37" r="2.2" fill="#5b4632" stroke="none"/><ellipse cx="44" cy="42" rx="2.6" ry="2" fill="#5b4632" stroke="none"/><ellipse cx="30" cy="58" rx="6" ry="7" fill="#b08968" transform="rotate(-20 30 58)"/><circle cx="30" cy="52" r="2.4" fill="#8a5a34" stroke="none"/>') },
+  { id:"snake", zh:"小蛇", en:"Snake", cat:"animals", scene:"forest", svg:S('<path d="M14 78 Q40 66 58 76 Q78 86 84 68 Q88 54 74 52" fill="none" stroke="#8fce6e" stroke-width="11"/><ellipse cx="70" cy="46" rx="13" ry="10" fill="#8fce6e" transform="rotate(-16 70 46)"/><circle cx="66" cy="43" r="2.4" fill="#5b4632" stroke="none"/><circle cx="76" cy="41" r="2.4" fill="#5b4632" stroke="none"/><path d="M82 50 L92 48 M82 50 L90 55" fill="none" stroke="#ef8f7a" stroke-width="2.6"/><circle cx="30" cy="72" r="3" fill="#6fb457" stroke="none" opacity=".8"/><circle cx="52" cy="76" r="3" fill="#6fb457" stroke="none" opacity=".8"/>') },
+  { id:"owl", zh:"猫头鹰", en:"Owl", cat:"animals", scene:"forest", svg:S('<polygon points="26,30 24,14 40,22" fill="#a9805a"/><polygon points="74,30 76,14 60,22" fill="#a9805a"/><ellipse cx="50" cy="56" rx="26" ry="30" fill="#b08968"/><ellipse cx="50" cy="66" rx="15" ry="18" fill="#f3ddba"/><circle cx="39" cy="42" r="9" fill="#fff"/><circle cx="61" cy="42" r="9" fill="#fff"/><circle cx="39" cy="42" r="4" fill="#5b4632" stroke="none"/><circle cx="61" cy="42" r="4" fill="#5b4632" stroke="none"/><polygon points="50,48 45,54 55,54" fill="#f2b04e"/><path d="M24 56 Q14 62 20 72 M76 56 Q86 62 80 72" fill="none" stroke="#a9805a" stroke-width="5"/><path d="M16 88 H84" fill="none" stroke="#8a6d4f" stroke-width="4"/><path d="M42 86 L42 90 M58 86 L58 90" fill="none" stroke="#f2b04e" stroke-width="3"/>') },
+  { id:"butterfly", zh:"蝴蝶", en:"Butterfly", cat:"animals", scene:"garden", svg:S('<ellipse cx="28" cy="38" rx="15" ry="11" fill="#f6a8d8" transform="rotate(-24 28 38)"/><ellipse cx="72" cy="38" rx="15" ry="11" fill="#f6a8d8" transform="rotate(24 72 38)"/><ellipse cx="30" cy="64" rx="12" ry="9" fill="#c3a6dd" transform="rotate(20 30 64)"/><ellipse cx="70" cy="64" rx="12" ry="9" fill="#c3a6dd" transform="rotate(-20 70 64)"/><ellipse cx="50" cy="54" rx="5.4" ry="19" fill="#7a5c3e"/><circle cx="50" cy="32" r="6.4" fill="#7a5c3e"/><path d="M46 27 Q40 16 33 15 M54 27 Q60 16 67 15" fill="none" stroke="#7a5c3e" stroke-width="2.6"/><circle cx="27" cy="37" r="3.4" fill="#fff" stroke="none" opacity=".65"/><circle cx="73" cy="37" r="3.4" fill="#fff" stroke="none" opacity=".65"/>') },
+  { id:"bee", zh:"蜜蜂", en:"Bee", cat:"animals", scene:"garden", svg:S('<ellipse cx="36" cy="28" rx="11" ry="7" fill="#dff1fb" transform="rotate(-28 36 28)"/><ellipse cx="64" cy="28" rx="11" ry="7" fill="#dff1fb" transform="rotate(28 64 28)"/><ellipse cx="50" cy="58" rx="21" ry="18" fill="#f7d774"/><path d="M38 44 Q36 58 38 72 M50 41 L50 75 M62 44 Q64 58 62 72" fill="none" stroke="#5b4632" stroke-width="5"/><path d="M71 58 L82 62 L71 66Z" fill="#5b4632"/><circle cx="35" cy="52" r="2.6" fill="#5b4632" stroke="none"/><path d="M28 62 Q32 66 37 63" fill="none"/>') },
+  { id:"ladybug", zh:"瓢虫", en:"Ladybug", cat:"animals", scene:"garden", svg:S('<circle cx="50" cy="56" r="27" fill="#ef6a5e"/><path d="M50 30 L50 82" fill="none" stroke="#5b4632" stroke-width="3"/><circle cx="37" cy="50" r="4" fill="#5b4632" stroke="none"/><circle cx="63" cy="48" r="3.4" fill="#5b4632" stroke="none"/><circle cx="42" cy="68" r="3.4" fill="#5b4632" stroke="none"/><circle cx="60" cy="66" r="4" fill="#5b4632" stroke="none"/><path d="M32 32 Q28 22 20 20 M68 32 Q72 22 80 20" fill="none" stroke="#5b4632" stroke-width="2.6"/><circle cx="50" cy="28" r="8" fill="#5b4632"/>') },
+  { id:"guitar", zh:"吉他", en:"Guitar", cat:"music", svg:S('<path d="M40 62 Q28 54 30 42 Q32 32 42 32 L62 12 Q64 10 67 12 L74 18 Q76 21 74 24 L56 44 Q62 52 56 64 Q50 76 40 62Z" fill="#d9a066"/><circle cx="44" cy="52" r="7.4" fill="#8a5a34"/><path d="M50 46 L70 24" fill="none" stroke="#fdf3ec" stroke-width="1.6"/><path d="M58 66 L66 74 M66 58 L74 66" fill="none" stroke="#b08968" stroke-width="3"/>') },
+  { id:"pear", zh:"梨", en:"Pear", cat:"fruitveg", svg:S('<path d="M50 34 Q58 34 62 46 Q72 58 68 72 Q64 84 50 84 Q36 84 32 72 Q28 58 38 46 Q42 34 50 34Z" fill="#cfe08a"/><path d="M50 34 Q50 24 57 18" fill="none" stroke="#8a6d4f" stroke-width="3.4"/><ellipse cx="64" cy="20" rx="8.4" ry="4.6" fill="#7fb069" transform="rotate(-22 64 20)"/><ellipse cx="41" cy="56" rx="4" ry="7" fill="#fff" stroke="none" opacity=".35" transform="rotate(-14 41 56)"/>') },
+  { id:"lemon", zh:"柠檬", en:"Lemon", cat:"fruitveg", svg:S('<path d="M20 58 Q14 50 22 44 Q30 26 52 26 Q76 26 82 46 Q88 52 80 60 Q72 78 50 78 Q28 78 20 58Z" fill="#f7d774"/><ellipse cx="36" cy="42" rx="5" ry="8" fill="#fff" stroke="none" opacity=".4" transform="rotate(-20 36 42)"/><ellipse cx="66" cy="24" rx="8" ry="4.4" fill="#7fb069" transform="rotate(-24 66 24)"/>') },
+  { id:"broccoli", zh:"西兰花", en:"Broccoli", cat:"fruitveg", svg:S('<path d="M44 56 L42 82 Q50 86 58 82 L56 56Z" fill="#bcd9a8"/><circle cx="34" cy="42" r="13" fill="#6fb457"/><circle cx="52" cy="34" r="15" fill="#7fb069"/><circle cx="68" cy="44" r="12" fill="#6fb457"/><circle cx="44" cy="48" r="10" fill="#7fb069" stroke="none"/><circle cx="60" cy="50" r="9" fill="#679552" stroke="none" opacity=".7"/>') },
+  { id:"flower", zh:"花朵", en:"Flower", cat:"nature", scene:"garden", svg:S('<path d="M50 58 Q48 74 50 88" fill="none" stroke="#7fb069" stroke-width="4"/><path d="M50 74 Q38 72 34 62 Q46 62 50 70Z" fill="#7fb069"/><circle cx="50" cy="26" r="9" fill="#f6a8d8"/><circle cx="66" cy="36" r="9" fill="#f6a8d8"/><circle cx="61" cy="52" r="9" fill="#f6a8d8"/><circle cx="39" cy="52" r="9" fill="#f6a8d8"/><circle cx="34" cy="36" r="9" fill="#f6a8d8"/><circle cx="50" cy="39" r="8" fill="#f7d774"/>') },
+  { id:"cloud", zh:"白云", en:"Cloud", cat:"nature", scene:"sky", svg:S('<path d="M24 68 Q12 68 14 56 Q15 46 26 44 Q30 28 46 28 Q60 28 64 42 Q78 42 79 55 Q80 68 66 68Z" fill="#fdfdfd"/><circle cx="36" cy="52" r="2.4" fill="#5b4632" stroke="none"/><circle cx="58" cy="52" r="2.4" fill="#5b4632" stroke="none"/><path d="M42 60 Q47 63 52 60" fill="none"/>') },
+  { id:"koala", zh:"考拉", en:"Koala", cat:"animals", eats:"leaf", scene:"forest", emoji:"🐨" },
+  { id:"hedgehog", zh:"刺猬", en:"Hedgehog", cat:"animals", scene:"forest", emoji:"🦔" },
+  { id:"bat", zh:"蝙蝠", en:"Bat", cat:"animals", scene:"forest", emoji:"🦇" },
+  { id:"wolf", zh:"狼", en:"Wolf", cat:"animals", scene:"forest", emoji:"🐺" },
+  { id:"mouse", zh:"小老鼠", en:"Mouse", cat:"animals", emoji:"🐭" },
+  { id:"hamster", zh:"仓鼠", en:"Hamster", cat:"animals", emoji:"🐹" },
+  { id:"crocodile", zh:"鳄鱼", en:"Crocodile", cat:"animals", scene:"water", emoji:"🐊" },
+  { id:"lizard", zh:"蜥蜴", en:"Lizard", cat:"animals", scene:"forest", emoji:"🦎" },
+  { id:"sloth", zh:"树懒", en:"Sloth", cat:"animals", scene:"forest", emoji:"🦥" },
+  { id:"raccoon", zh:"浣熊", en:"Raccoon", cat:"animals", scene:"forest", emoji:"🦝" },
+  { id:"otter", zh:"水獭", en:"Otter", cat:"animals", scene:"water", emoji:"🦦" },
+  { id:"skunk", zh:"臭鼬", en:"Skunk", cat:"animals", scene:"forest", emoji:"🦨" },
+  { id:"llama", zh:"羊驼", en:"Llama", cat:"animals", scene:"farm", emoji:"🦙" },
+  { id:"camel", zh:"骆驼", en:"Camel", cat:"animals", emoji:"🐪" },
+  { id:"gorilla", zh:"大猩猩", en:"Gorilla", cat:"animals", scene:"forest", emoji:"🦍" },
+  { id:"hippo", zh:"河马", en:"Hippo", cat:"animals", scene:"water", emoji:"🦛" },
+  { id:"boar", zh:"野猪", en:"Boar", cat:"animals", scene:"forest", emoji:"🐗" },
+  { id:"badger", zh:"獾", en:"Badger", cat:"animals", scene:"forest", emoji:"🦡" },
+  { id:"beaver", zh:"河狸", en:"Beaver", cat:"animals", scene:"water", emoji:"🦫" },
+  { id:"catbody", zh:"猫咪", en:"Cat", cat:"animals", baby:"kitten", emoji:"🐈" },
+  { id:"seal", zh:"海豹", en:"Seal", cat:"ocean", scene:"water", emoji:"🦭" },
+  { id:"puffer", zh:"河豚", en:"Pufferfish", cat:"ocean", scene:"water", emoji:"🐡" },
+  { id:"tropicalfish", zh:"热带鱼", en:"Tropical Fish", cat:"ocean", scene:"water", emoji:"🐠" },
+  { id:"lobster", zh:"龙虾", en:"Lobster", cat:"ocean", scene:"water", emoji:"🦞" },
+  { id:"oyster", zh:"牡蛎", en:"Oyster", cat:"ocean", scene:"water", emoji:"🦪" },
+  { id:"jellyfish", zh:"水母", en:"Jellyfish", cat:"ocean", scene:"water", emoji:"🪼" },
+  { id:"shell", zh:"贝壳", en:"Shell", cat:"ocean", scene:"water", emoji:"🐚" },
+  { id:"coral", zh:"珊瑚", en:"Coral", cat:"ocean", scene:"water", emoji:"🪸" },
+  { id:"bluewhale", zh:"蓝鲸", en:"Blue Whale", cat:"ocean", scene:"water", emoji:"🐋" },
+  { id:"island", zh:"小岛", en:"Island", cat:"ocean", scene:"water", emoji:"🏝️" },
+  { id:"alien", zh:"外星人", en:"Alien", cat:"space", scene:"space", emoji:"👽" },
+  { id:"robot", zh:"机器人", en:"Robot", cat:"space", scene:"space", emoji:"🤖" },
+  { id:"telescope", zh:"望远镜", en:"Telescope", cat:"space", emoji:"🔭" },
+  { id:"ufo", zh:"飞碟", en:"UFO", cat:"space", scene:"space", emoji:"🛸" },
+  { id:"comet", zh:"彗星", en:"Comet", cat:"space", scene:"space", emoji:"☄️" },
+  { id:"fullmoon", zh:"满月", en:"Full Moon", cat:"space", scene:"space", emoji:"🌕" },
+  { id:"milkyway", zh:"银河", en:"Milky Way", cat:"space", scene:"space", emoji:"🌌" },
+  { id:"shootingstar", zh:"流星", en:"Shooting Star", cat:"space", scene:"space", emoji:"🌠" },
+  { id:"rooster", zh:"公鸡", en:"Rooster", cat:"farm", scene:"farm", emoji:"🐓" },
+  { id:"turkey", zh:"火鸡", en:"Turkey", cat:"farm", scene:"farm", emoji:"🦃" },
+  { id:"ox", zh:"公牛", en:"Ox", cat:"farm", scene:"farm", emoji:"🐂" },
+  { id:"cowbody", zh:"奶牛", en:"Cow", cat:"farm", baby:"cow", scene:"farm", emoji:"🐄" },
+  { id:"horsebody", zh:"马", en:"Horse", cat:"farm", baby:"horse", scene:"farm", emoji:"🐎" },
+  { id:"pigbody", zh:"猪", en:"Pig", cat:"farm", baby:"pig", scene:"farm", emoji:"🐖" },
+  { id:"tractor", zh:"拖拉机", en:"Tractor", cat:"farm", scene:"farm", emoji:"🚜" },
+  { id:"rice", zh:"稻穗", en:"Rice", cat:"farm", scene:"farm", emoji:"🌾" },
+  { id:"sunflower", zh:"向日葵", en:"Sunflower", cat:"farm", scene:"farm", emoji:"🌻" },
+  { id:"egg", zh:"鸡蛋", en:"Egg", cat:"farm", scene:"farm", emoji:"🥚" },
+  { id:"peanut", zh:"花生", en:"Peanuts", cat:"fruitveg", emoji:"🥜" },
+  { id:"cherries", zh:"樱桃", en:"Cherries", cat:"fruitveg", emoji:"🍒" },
+  { id:"melon", zh:"甜瓜", en:"Melon", cat:"fruitveg", emoji:"🍈" },
+  { id:"mango", zh:"芒果", en:"Mango", cat:"fruitveg", emoji:"🥭" },
+  { id:"coconut", zh:"椰子", en:"Coconut", cat:"fruitveg", emoji:"🥥" },
+  { id:"kiwi", zh:"猕猴桃", en:"Kiwi", cat:"fruitveg", emoji:"🥝" },
+  { id:"avocado", zh:"牛油果", en:"Avocado", cat:"fruitveg", emoji:"🥑" },
+  { id:"eggplant", zh:"茄子", en:"Eggplant", cat:"fruitveg", emoji:"🍆" },
+  { id:"cucumber", zh:"黄瓜", en:"Cucumber", cat:"fruitveg", emoji:"🥒" },
+  { id:"chili", zh:"辣椒", en:"Chili Pepper", cat:"fruitveg", emoji:"🌶️" },
+  { id:"potato", zh:"土豆", en:"Potato", cat:"fruitveg", emoji:"🥔" },
+  { id:"mushroom", zh:"蘑菇", en:"Mushroom", cat:"fruitveg", emoji:"🍄" },
+  { id:"lettuce", zh:"生菜", en:"Lettuce", cat:"fruitveg", emoji:"🥬" },
+  { id:"blueberries", zh:"蓝莓", en:"Blueberries", cat:"fruitveg", emoji:"🫐" },
+  { id:"bellpepper", zh:"彩椒", en:"Bell Pepper", cat:"fruitveg", emoji:"🫑" },
+  { id:"peas", zh:"豌豆", en:"Pea Pod", cat:"fruitveg", emoji:"🫛" },
+  { id:"taxi", zh:"出租车", en:"Taxi", cat:"vehicles", scene:"road", emoji:"🚕" },
+  { id:"policecar", zh:"警车", en:"Police Car", cat:"vehicles", scene:"road", emoji:"🚓" },
+  { id:"suv", zh:"越野车", en:"SUV", cat:"vehicles", scene:"road", emoji:"🚙" },
+  { id:"racecar", zh:"赛车", en:"Race Car", cat:"vehicles", scene:"road", emoji:"🏎️" },
+  { id:"motorcycle", zh:"摩托车", en:"Motorcycle", cat:"vehicles", scene:"road", emoji:"🏍️" },
+  { id:"scooter", zh:"小摩托", en:"Scooter", cat:"vehicles", scene:"road", emoji:"🛵" },
+  { id:"ship", zh:"轮船", en:"Ship", cat:"vehicles", scene:"water", emoji:"🚢" },
+  { id:"subway", zh:"地铁", en:"Subway", cat:"vehicles", scene:"rail", emoji:"🚇" },
+  { id:"smallplane", zh:"小飞机", en:"Small Plane", cat:"vehicles", scene:"sky", emoji:"🛩️" },
+  { id:"locomotive", zh:"火车头", en:"Locomotive", cat:"vehicles", scene:"rail", emoji:"🚂" },
+  { id:"scissors", zh:"剪刀", en:"Scissors", cat:"daily", emoji:"✂️" },
+  { id:"key", zh:"钥匙", en:"Key", cat:"daily", emoji:"🔑" },
+  { id:"clock", zh:"闹钟", en:"Alarm Clock", cat:"daily", emoji:"⏰" },
+  { id:"umbrella", zh:"雨伞", en:"Umbrella", cat:"daily", emoji:"☂️" },
+  { id:"backpack", zh:"书包", en:"Backpack", cat:"daily", emoji:"🎒" },
+  { id:"glasses", zh:"眼镜", en:"Glasses", cat:"daily", emoji:"👓" },
+  { id:"camera", zh:"相机", en:"Camera", cat:"daily", emoji:"📷" },
+  { id:"toothbrush", zh:"牙刷", en:"Toothbrush", cat:"daily", emoji:"🪥" },
+  { id:"soap", zh:"肥皂", en:"Soap", cat:"daily", emoji:"🧼" },
+  { id:"teddy", zh:"泰迪熊", en:"Teddy Bear", cat:"daily", emoji:"🧸" },
+  { id:"crayon", zh:"蜡笔", en:"Crayon", cat:"daily", emoji:"🖍️" },
+  { id:"ruler", zh:"尺子", en:"Ruler", cat:"daily", emoji:"📏" },
+  { id:"lamp", zh:"灯泡", en:"Light Bulb", cat:"daily", emoji:"💡" },
+  { id:"watch", zh:"手表", en:"Watch", cat:"daily", emoji:"⌚" },
+  { id:"kite", zh:"风筝", en:"Kite", cat:"daily", emoji:"🪁" },
+  { id:"puzzle", zh:"拼图", en:"Puzzle", cat:"daily", emoji:"🧩" },
+  { id:"palette", zh:"调色板", en:"Palette", cat:"daily", emoji:"🎨" },
+  { id:"hamburger", zh:"汉堡", en:"Burger", cat:"food", emoji:"🍔" },
+  { id:"pizza", zh:"披萨", en:"Pizza", cat:"food", emoji:"🍕" },
+  { id:"fries", zh:"薯条", en:"Fries", cat:"food", emoji:"🍟" },
+  { id:"popcorn", zh:"爆米花", en:"Popcorn", cat:"food", emoji:"🍿" },
+  { id:"friedegg", zh:"煎蛋", en:"Fried Egg", cat:"food", emoji:"🍳" },
+  { id:"pancake", zh:"松饼", en:"Pancakes", cat:"food", emoji:"🥞" },
+  { id:"cheese", zh:"奶酪", en:"Cheese", cat:"food", emoji:"🧀" },
+  { id:"donut", zh:"甜甜圈", en:"Donut", cat:"food", emoji:"🍩" },
+  { id:"candy", zh:"糖果", en:"Candy", cat:"food", emoji:"🍬" },
+  { id:"lollipop", zh:"棒棒糖", en:"Lollipop", cat:"food", emoji:"🍭" },
+  { id:"chocolate", zh:"巧克力", en:"Chocolate", cat:"food", emoji:"🍫" },
+  { id:"milk", zh:"牛奶", en:"Milk", cat:"food", emoji:"🥛" },
+  { id:"honey", zh:"蜂蜜", en:"Honey", cat:"food", emoji:"🍯" },
+  { id:"chickenleg", zh:"鸡腿", en:"Chicken Leg", cat:"food", emoji:"🍗" },
+  { id:"dumpling", zh:"饺子", en:"Dumpling", cat:"food", emoji:"🥟" },
+  { id:"pants", zh:"裤子", en:"Pants", cat:"clothes", emoji:"👖" },
+  { id:"coat", zh:"外套", en:"Coat", cat:"clothes", emoji:"🧥" },
+  { id:"scarf", zh:"围巾", en:"Scarf", cat:"clothes", emoji:"🧣" },
+  { id:"gloves", zh:"手套", en:"Gloves", cat:"clothes", emoji:"🧤" },
+  { id:"boots", zh:"靴子", en:"Boots", cat:"clothes", emoji:"👢" },
+  { id:"sandal", zh:"凉鞋", en:"Sandal", cat:"clothes", emoji:"👡" },
+  { id:"sunglasses", zh:"墨镜", en:"Sunglasses", cat:"clothes", emoji:"🕶️" },
+  { id:"sunhat", zh:"草帽", en:"Sun Hat", cat:"clothes", emoji:"👒" },
+  { id:"swimsuit", zh:"泳衣", en:"Swimsuit", cat:"clothes", emoji:"🩱" },
+  { id:"shorts", zh:"短裤", en:"Shorts", cat:"clothes", emoji:"🩳" },
+  { id:"kimono", zh:"和服", en:"Kimono", cat:"clothes", emoji:"👘" },
+  { id:"balletshoes", zh:"芭蕾舞鞋", en:"Ballet Shoes", cat:"clothes", emoji:"🩰" },
+  { id:"piano", zh:"钢琴", en:"Piano", cat:"music", emoji:"🎹" },
+  { id:"drum", zh:"鼓", en:"Drum", cat:"music", emoji:"🥁" },
+  { id:"trumpet", zh:"小号", en:"Trumpet", cat:"music", emoji:"🎺" },
+  { id:"violin", zh:"小提琴", en:"Violin", cat:"music", emoji:"🎻" },
+  { id:"saxophone", zh:"萨克斯", en:"Saxophone", cat:"music", emoji:"🎷" },
+  { id:"microphone", zh:"麦克风", en:"Microphone", cat:"music", emoji:"🎤" },
+  { id:"headphones", zh:"耳机", en:"Headphones", cat:"music", emoji:"🎧" },
+  { id:"bell", zh:"铃铛", en:"Bell", cat:"music", emoji:"🔔" },
+  { id:"flute", zh:"长笛", en:"Flute", cat:"music", emoji:"🪈" },
+  { id:"accordion", zh:"手风琴", en:"Accordion", cat:"music", emoji:"🪗" },
+  { id:"musicnote", zh:"音符", en:"Music Note", cat:"music", emoji:"🎵" },
+  { id:"musicnotes", zh:"旋律", en:"Melody", cat:"music", emoji:"🎶" },
+  { id:"basketball", zh:"篮球", en:"Basketball", cat:"sports", emoji:"🏀" },
+  { id:"tennis", zh:"网球", en:"Tennis", cat:"sports", emoji:"🎾" },
+  { id:"volleyball", zh:"排球", en:"Volleyball", cat:"sports", emoji:"🏐" },
+  { id:"baseball", zh:"棒球", en:"Baseball", cat:"sports", emoji:"⚾" },
+  { id:"badminton", zh:"羽毛球", en:"Badminton", cat:"sports", emoji:"🏸" },
+  { id:"pingpong", zh:"乒乓球", en:"Ping Pong", cat:"sports", emoji:"🏓" },
+  { id:"bowling", zh:"保龄球", en:"Bowling", cat:"sports", emoji:"🎳" },
+  { id:"trophy", zh:"奖杯", en:"Trophy", cat:"sports", emoji:"🏆" },
+  { id:"medal", zh:"金牌", en:"Gold Medal", cat:"sports", emoji:"🥇" },
+  { id:"skateboard", zh:"滑板", en:"Skateboard", cat:"sports", emoji:"🛹" },
+  { id:"ski", zh:"滑雪板", en:"Skis", cat:"sports", emoji:"🎿" },
+  { id:"iceskate", zh:"冰鞋", en:"Ice Skate", cat:"sports", emoji:"⛸️" },
+  { id:"darts", zh:"飞镖", en:"Darts", cat:"sports", emoji:"🎯" },
+  { id:"swimmer", zh:"游泳", en:"Swimming", cat:"sports", emoji:"🏊" },
+  { id:"leaf", zh:"树叶", en:"Leaf", cat:"nature", scene:"forest", emoji:"🍃" },
+  { id:"snowflake", zh:"雪花", en:"Snowflake", cat:"nature", emoji:"❄️" },
+  { id:"snowman", zh:"雪人", en:"Snowman", cat:"nature", emoji:"⛄" },
+  { id:"mapleleaf", zh:"枫叶", en:"Maple Leaf", cat:"nature", scene:"forest", emoji:"🍁" },
+  { id:"tree", zh:"大树", en:"Tree", cat:"nature", scene:"forest", emoji:"🌳" },
+  { id:"pinetree", zh:"松树", en:"Pine Tree", cat:"nature", scene:"forest", emoji:"🌲" },
+  { id:"cactus", zh:"仙人掌", en:"Cactus", cat:"nature", emoji:"🌵" },
+  { id:"tulip", zh:"郁金香", en:"Tulip", cat:"nature", scene:"garden", emoji:"🌷" },
+  { id:"rose", zh:"玫瑰", en:"Rose", cat:"nature", scene:"garden", emoji:"🌹" },
+  { id:"mountain", zh:"雪山", en:"Mountain", cat:"nature", emoji:"🏔️" },
+  { id:"volcano", zh:"火山", en:"Volcano", cat:"nature", emoji:"🌋" },
+  { id:"wave", zh:"海浪", en:"Wave", cat:"nature", scene:"water", emoji:"🌊" },
+  { id:"fire", zh:"火焰", en:"Fire", cat:"nature", emoji:"🔥" },
+  { id:"droplet", zh:"水滴", en:"Droplet", cat:"nature", scene:"water", emoji:"💧" }
+];
+ASSETS.push.apply(ASSETS, ASSETS_MORE);
+const ASSET_BY_ID = {};
+ASSETS.forEach(a => { ASSET_BY_ID[a.id] = a; });
+
+/* ===== THEME_PACKS · 主题包注册表（并入自 0 号记忆翻牌全部 26 套主题，每套约 50 图；字段 g 图案 / zh / en，所属主题见 PACK_META；数字与字母包以特大粗字呈现） ===== */
+const PACK_META = [["animals","🦁","动物园","Zoo"],["ocean","🐳","海洋","Ocean"],["food","🍔","美食","Food"],["fruitveg","🍎","水果蔬菜","Fruits & Veggies"],["dessert","🍰","甜点饮品","Desserts & Drinks"],["space","🚀","太空","Space"],["sports","⚽","运动","Sports"],["vehicles","🚗","交通","Vehicles"],["garden","🌸","花园植物","Garden"],["music","🎸","音乐","Music"],["toys","🧸","玩具游戏","Toys & Games"],["bugsbirds","🦋","昆虫鸟类","Bugs & Birds"],["weather","🌈","天气自然","Weather & Nature"],["pets","🐶","宠物","Pets"],["festival","🎄","节日庆典","Festivals"],["jobs","👩‍🚀","职业人物","Jobs"],["shapes","🔷","颜色形状","Colors & Shapes"],["numbers","🔢","数字","Numbers"],["letters","🔤","英文字母","Letters"],["emotions","😀","表情情绪","Feelings"],["body","👀","身体部位","Body Parts"],["clothes","👕","衣服穿戴","Clothes"],["home","🏠","日常用品","Everyday Things"],["farm","🚜","农场","Farm"],["seasons","🍂","四季","Seasons"],["school","🎒","学校用品","School Things"]];
+function PP(s){ return s.split(";").map(function(tok){ var p = tok.split("|"); return { g:p[0], zh:p[1], en:p[2] }; }); }
+const PACKS = { animals: PP("🦁|狮子|Lion;🐯|老虎|Tiger;🐼|熊猫|Panda;🐘|大象|Elephant;🦒|长颈鹿|Giraffe;🦓|斑马|Zebra;🦛|河马|Hippo;🦏|犀牛|Rhino;🦘|袋鼠|Kangaroo;🐨|考拉|Koala;🐻|棕熊|Bear;🦊|狐狸|Fox;🐺|狼|Wolf;🐰|兔子|Rabbit;🐿️|松鼠|Squirrel;🦔|刺猬|Hedgehog;🦌|鹿|Deer;🐪|骆驼|Camel;🦙|羊驼|Llama;🐐|山羊|Goat;🐑|绵羊|Sheep;🐷|小猪|Pig;🐮|奶牛|Cow;🐴|马|Horse;🐱|猫咪|Cat;🐶|小狗|Dog;🐵|猴子|Monkey;🦍|大猩猩|Gorilla;🦥|树懒|Sloth;🦨|臭鼬|Skunk;🦝|浣熊|Raccoon;🦦|水獭|Otter;🐏|公羊|Ram;🦇|蝙蝠|Bat;🐭|老鼠|Mouse;🐹|仓鼠|Hamster;🐗|野猪|Boar;🐂|公牛|Ox;🐆|豹子|Leopard;🐅|老虎|Tiger;🐊|鳄鱼|Crocodile;🐢|海龟|Turtle;🦎|蜥蜴|Lizard;🐍|蛇|Snake;🐸|青蛙|Frog;🦖|霸王龙|T-Rex;🦕|长颈龙|Sauropod;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster"), ocean: PP("🐳|鲸鱼|Whale;🐋|蓝鲸|Blue Whale;🐬|海豚|Dolphin;🏊|游泳|Swimming;🐙|章鱼|Octopus;🦑|鱿鱼|Squid;🦀|螃蟹|Crab;🦞|龙虾|Lobster;🦐|小虾|Shrimp;🐠|热带鱼|Tropical Fish;🐟|小鱼|Fish;🐡|河豚|Pufferfish;🦈|鲨鱼|Shark;🐢|海龟|Sea Turtle;🚤|快艇|Speedboat;🐚|贝壳|Shell;🌴|棕榈树|Palm Tree;🏄|冲浪|Surfing;🦦|海獭|Sea Otter;🧭|指南针|Compass;🚣|划船|Rowing;🐌|海螺|Sea Snail;🦂|蝎子|Scorpion;🐊|鳄鱼|Crocodile;🦩|火烈鸟|Flamingo;🐧|企鹅|Penguin;🦢|天鹅|Swan;🦆|鸭子|Duck;🐸|青蛙|Frog;🛶|独木舟|Canoe;⛵|帆船|Sailboat;🚢|轮船|Ship;⚓|船锚|Anchor;⛱️|沙滩伞|Beach Umbrella;🏝️|小岛|Island;🌊|海浪|Wave;💧|水滴|Droplet;💦|水花|Splash;🧜|美人鱼|Mermaid;🔱|三叉戟|Trident;🗺️|藏宝图|Treasure Map;💎|宝石|Gem;🚩|红旗|Red Flag;🎏|鲤鱼旗|Carp Streamer;🤿|潜水面镜|Diving Mask;🎣|钓鱼竿|Fishing Pole;🌺|扶桑花|Hibiscus;🌅|海上日出|Ocean Sunrise;🏖️|沙滩|Beach;🕊️|鸽子|Dove;⛴️|渡轮|Ferry;🧊|浮冰|Ice Floe;🤽|水球|Water Polo"), food: PP("🍔|汉堡|Burger;🍕|披萨|Pizza;🌭|热狗|Hot Dog;🌮|塔可|Taco;🌯|卷饼|Burrito;🥪|三明治|Sandwich;🍟|薯条|Fries;🍗|炸鸡|Fried Chicken;🍖|烤肉|Meat;🥓|培根|Bacon;🍳|煎蛋|Fried Egg;🥞|松饼|Pancakes;🧇|华夫饼|Waffle;🍞|面包|Bread;🥐|可颂|Croissant;🥖|法棍|Baguette;🥨|椒盐卷饼|Pretzel;🧀|奶酪|Cheese;🥗|沙拉|Salad;🍲|火锅|Hot Pot;🍜|拉面|Ramen;🍝|意面|Pasta;🍣|寿司|Sushi;🍱|便当|Bento;🍙|饭团|Onigiri;🍚|米饭|Rice;🍛|咖喱饭|Curry Rice;🥟|饺子|Dumpling;🍤|炸虾|Fried Shrimp;🍢|关东煮|Oden;🍡|团子|Dango;🥠|幸运饼干|Fortune Cookie;🥮|月饼|Mooncake;🍿|爆米花|Popcorn;🌽|玉米|Corn;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍠|红薯|Sweet Potato;🥔|土豆|Potato;🥕|胡萝卜|Carrot;🥒|黄瓜|Cucumber;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🧄|大蒜|Garlic;🧅|洋葱|Onion;🍄|蘑菇|Mushroom;🥩|牛排|Steak;🍘|米饼|Rice Cracker;🦴|骨头|Bone"), fruitveg: PP("🍎|苹果|Apple;🍐|梨|Pear;🍊|橙子|Orange;🍋|柠檬|Lemon;🍌|香蕉|Banana;🍉|西瓜|Watermelon;🍇|葡萄|Grapes;🍓|草莓|Strawberry;🍈|甜瓜|Melon;🍒|樱桃|Cherries;🍑|桃子|Peach;🥭|芒果|Mango;🍍|菠萝|Pineapple;🥥|椰子|Coconut;🥝|猕猴桃|Kiwi;🍅|番茄|Tomato;🍆|茄子|Eggplant;🥑|牛油果|Avocado;🥦|西兰花|Broccoli;🥬|生菜|Lettuce;🥒|黄瓜|Cucumber;🌶️|辣椒|Chili;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🧄|大蒜|Garlic;🧅|洋葱|Onion;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🥞|松饼|Pancakes;🥜|花生|Peanuts;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;🎃|南瓜|Pumpkin;🥚|鸡蛋|Egg;🍏|青苹果|Green Apple;🧈|黄油|Butter;🧆|蔬菜丸子|Veggie Balls;🧀|奶酪|Cheese;🥫|番茄罐头|Canned Tomatoes;🌻|向日葵|Sunflower;🌾|稻穗|Sheaf of Rice;🥗|蔬菜沙拉|Veggie Salad;🍯|蜂蜜|Honey;🧃|果汁|Juice;🥛|牛奶|Milk;🥯|贝果|Bagel;🥙|蔬菜卷饼|Stuffed Wrap;🍲|蔬菜汤|Veggie Soup"), dessert: PP("🍰|蛋糕|Cake;🎂|生日蛋糕|Birthday Cake;🧁|纸杯蛋糕|Cupcake;🍩|甜甜圈|Donut;🍪|饼干|Cookie;🍫|巧克力|Chocolate;🍬|糖果|Candy;🍭|棒棒糖|Lollipop;🍮|布丁|Pudding;🍯|蜂蜜|Honey;🍦|冰淇淋|Ice Cream;🍨|冰淇淋杯|Sundae;🍧|刨冰|Shaved Ice;🍘|米饼|Rice Cracker;🥣|甜汤|Sweet Soup;🧇|华夫饼|Waffle;🥞|松饼|Pancakes;🍞|吐司|Toast;🥐|可颂|Croissant;🥖|法棍|Baguette;🧀|芝士蛋糕|Cheesecake;🍓|草莓蛋糕|Strawberry Cake;🍒|樱桃派|Cherry Pie;🥛|牛奶|Milk;🧃|果汁|Juice Box;🥤|汽水|Soda;🍵|抹茶|Matcha;☕|咖啡|Coffee;🍶|清酒|Sake;🥂|香槟|Champagne;🍹|鸡尾酒|Cocktail;🧉|马黛茶|Mate;🍼|牛奶瓶|Milk Bottle;🥜|花生酱|Peanut Butter;🧊|冰块|Ice;🍾|香槟瓶|Champagne Bottle;🍥|鱼板|Fish Cake;🍻|干杯啤酒|Beers;🍽️|甜品餐盘|Dessert Plate;🥮|月饼|Mooncake;🍡|三色团子|Dango;🍢|丸子串|Skewer;🥠|幸运饼干|Fortune Cookie;🥧|苹果派|Apple Pie;🥄|甜品勺|Dessert Spoon;🍴|餐叉|Fork;🍌|香蕉船|Banana Split;🍇|葡萄|Grapes;🍉|西瓜冰沙|Watermelon Sorbet;🍊|橙子|Orange"), space: PP("🚀|火箭|Rocket;🛸|飞碟|UFO;🛰️|卫星|Satellite;🌕|满月|Full Moon;🌖|盈凸月|Gibbous Moon;🌗|下弦月|Last Quarter Moon;🌘|残月|Waning Moon;🌑|新月|New Moon;🌒|眉月|Waxing Moon;🌓|上弦月|First Quarter Moon;🌔|凸月|Waxing Gibbous;🌙|弯月|Crescent Moon;🌛|月亮脸|Moon Face;🌜|晚月脸|Late Moon Face;🌚|新月脸|New Moon Face;🌝|满月脸|Full Moon Face;🌞|太阳脸|Sun Face;🌟|闪亮星|Glowing Star;💫|流星|Dizzy Star;✨|闪烁|Sparkles;☄️|彗星|Comet;🌠|流星雨|Shooting Star;🌍|地球|Earth;🌎|美洲地球|Earth Americas;🌏|亚洲地球|Earth Asia;🪐|土星|Saturn;🔭|望远镜|Telescope;📡|卫星天线|Satellite Dish;👽|外星人|Alien;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🌌|银河|Milky Way;🌐|经纬地球|Globe;🔮|水晶球|Crystal Ball;🔥|火焰|Fire;🧲|磁铁|Magnet;🔬|显微镜|Microscope;🌡️|温度计|Thermometer;💡|灯泡|Light Bulb;🔋|电池|Battery;🌃|星夜|Starry Night;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;💥|爆炸|Collision;⚡|闪电|Lightning;❄️|雪花|Snowflake;🧊|冰块|Ice;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;🌈|彩虹|Rainbow;☁️|云朵|Cloud;🌊|海浪|Wave;🔦|手电筒|Flashlight"), sports: PP("⚽|足球|Soccer;🏀|篮球|Basketball;🏈|橄榄球|Football;⚾|棒球|Baseball;🥎|垒球|Softball;🎾|网球|Tennis;🏐|排球|Volleyball;🏉|英式橄榄球|Rugby;🎱|台球|Pool;🏓|乒乓球|Ping Pong;🏸|羽毛球|Badminton;🏒|冰球|Ice Hockey;🏑|曲棍球|Field Hockey;🥍|长曲棍球|Lacrosse;🏏|板球|Cricket;⛳|高尔夫|Golf;🏹|射箭|Archery;🎣|钓鱼|Fishing;🥊|拳击|Boxing;🥋|空手道|Karate;🛹|滑板|Skateboard;🛷|雪橇|Sled;⛸️|冰鞋|Ice Skate;🥌|冰壶|Curling;🎿|滑雪|Skiing;🏂|单板滑雪|Snowboard;🏋️|举重|Weightlifting;🤸|体操|Gymnastics;🤺|击剑|Fencing;🤾|手球|Handball;🏌️|高尔夫手|Golfer;🏇|赛马|Horse Racing;🚣|划船|Rowing;🚵|山地骑行|Mountain Biking;🚴|骑行|Cycling;🏃|跑步|Running;🏊|游泳|Swimming;🤽|水球|Water Polo;🧗|攀岩|Climbing;🏄|冲浪|Surfing;🪂|跳伞|Parachute;🏆|奖杯|Trophy;🥇|金牌|Gold Medal;🥈|银牌|Silver Medal;🥉|铜牌|Bronze Medal;🏅|奖牌|Medal;🎽|跑步背心|Running Shirt;👟|跑鞋|Sneaker;🧢|棒球帽|Cap;🎯|飞镖|Darts"), vehicles: PP("🚗|汽车|Car;🚕|出租车|Taxi;🚙|越野车|SUV;🚌|公交车|Bus;🚎|无轨电车|Trolleybus;🏎️|赛车|Race Car;🚓|警车|Police Car;🚑|救护车|Ambulance;🚒|消防车|Fire Truck;🚐|面包车|Minivan;🚘|迎面汽车|Oncoming Car;🚚|货车|Truck;🚛|卡车|Semi Truck;🚜|拖拉机|Tractor;🏍️|摩托车|Motorcycle;🛵|小摩托|Scooter;🚲|自行车|Bicycle;🛴|滑板车|Kick Scooter;🛺|三轮车|Auto Rickshaw;🚂|火车头|Locomotive;🚆|火车|Train;🚄|高铁|Bullet Train;🚅|动车|High-Speed Train;🚈|轻轨|Light Rail;🚇|地铁|Metro;🚊|电车|Tram;🚉|火车站|Station;✈️|飞机|Airplane;🛩️|小飞机|Small Plane;🛫|起飞|Takeoff;🛬|降落|Landing;🚁|直升机|Helicopter;🛸|飞碟|UFO;🚀|火箭|Rocket;🛰️|卫星|Satellite;⛵|帆船|Sailboat;🚤|快艇|Speedboat;🛥️|游艇|Yacht;🚢|轮船|Ship;⛴️|渡轮|Ferry;🛶|独木舟|Canoe;🚠|缆车|Cable Car;🚡|索道|Aerial Tramway;🛎️|服务铃|Bell;⛽|加油站|Gas Station;🚏|公交站|Bus Stop;🚦|红绿灯|Traffic Light;🚨|警灯|Police Light;🛒|购物车|Cart;🛣️|高速公路|Highway;🛤️|铁路轨道|Railway Track"), garden: PP("🌸|樱花|Cherry Blossom;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🌞|太阳公公|Sun Face;🍇|葡萄|Grapes;💐|花束|Bouquet;🌾|稻穗|Sheaf of Rice;🌿|香草|Herb;🍀|四叶草|Four-Leaf Clover;☘️|三叶草|Shamrock;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaf;🍃|绿叶|Leaf;🌱|嫩芽|Seedling;🌲|松树|Pine Tree;🌳|大树|Deciduous Tree;🌴|棕榈树|Palm Tree;🌵|仙人掌|Cactus;🎋|竹子|Tanabata Tree;🎍|松竹装饰|Pine Decoration;🌦️|太阳雨|Sun Shower;🍄|蘑菇|Mushroom;🌰|栗子|Chestnut;🥚|鸡蛋|Egg;🐣|小鸡|Hatching Chick;🦋|蝴蝶|Butterfly;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🐌|蜗牛|Snail;🐛|毛毛虫|Bug;🐜|蚂蚁|Ant;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌧️|下雨|Rain;💧|水滴|Droplet;🧤|园艺手套|Gardening Gloves;🚿|浇水|Shower;🌡️|温度计|Thermometer;🏡|花园小屋|Garden House;💮|白花|White Flower;🏵️|玫瑰花环|Rosette;🌤️|晴间多云|Sunny Spell"), music: PP("🎸|吉他|Guitar;🎹|钢琴|Piano;🥁|鼓|Drum;🎺|小号|Trumpet;🎻|小提琴|Violin;🎷|萨克斯|Saxophone;🪕|班卓琴|Banjo;🎤|麦克风|Microphone;🎙️|录音麦克风|Studio Mic;🎧|耳机|Headphones;📻|收音机|Radio;📺|电视|TV;🎥|摄像机|Movie Camera;📹|录像机|Video Camera;💿|光盘|CD;📀|影碟|DVD;📼|录像带|Videotape;🎞️|电影胶片|Film;🎬|场记板|Clapper Board;🎭|戏剧面具|Theater Masks;🎪|马戏团|Circus Tent;🎫|演出门票|Ticket;🎟️|入场券|Admission Ticket;💃|舞者|Dancer;🕺|跳舞|Man Dancing;🩰|芭蕾舞鞋|Ballet Shoes;🔔|铃铛|Bell;🛎️|服务铃|Service Bell;📢|喇叭|Megaphone;📣|扩音器|Loudspeaker;🔊|大音量|Speaker;🔉|中音量|Medium Volume;🔈|小音量|Low Volume;🎚️|调音台|Mixer;🎛️|控制台|Control Panel;🎵|音符|Musical Note;🎶|旋律|Musical Notes;🎼|乐谱|Musical Score;📯|号角|Horn;👏|鼓掌|Clapping;🎉|派对拉炮|Party Popper;🎊|彩带球|Confetti Ball;🎈|气球|Balloon;✨|闪烁|Sparkles;🌟|闪亮星|Glowing Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;📷|相机|Camera;📸|闪光相机|Camera Flash;🎩|魔术帽|Top Hat"), toys: PP("🧸|泰迪熊|Teddy Bear;🪀|溜溜球|Yo-Yo;🪁|风筝|Kite;🎮|游戏手柄|Game Controller;🕹️|摇杆|Joystick;🎲|骰子|Dice;🧩|拼图|Puzzle;♟️|国际象棋|Chess Pawn;🎯|飞镖靶|Darts;🎳|保龄球|Bowling;🎪|马戏团|Circus;🎠|旋转木马|Carousel;🎡|摩天轮|Ferris Wheel;🎢|过山车|Roller Coaster;🧱|积木|Bricks;🎎|日本娃娃|Japanese Dolls;🎨|调色板|Palette;🖍️|蜡笔|Crayon;✏️|铅笔|Pencil;📚|书本|Books;🔮|水晶球|Crystal Ball;✨|闪烁星星|Sparkles;🎩|魔术帽|Top Hat;🃏|小丑牌|Joker;🀄|麻将|Mahjong;🎴|花牌|Flower Cards;🐰|兔子玩偶|Bunny Plush;🔫|水枪|Water Gun;🎏|鲤鱼旗|Carp Streamer;🎰|老虎机|Slot Machine;👾|外星怪物|Alien Monster;🤖|机器人|Robot;🚀|玩具火箭|Toy Rocket;🚁|玩具直升机|Toy Helicopter;🚂|玩具火车|Toy Train;🚗|玩具车|Toy Car;🏰|城堡|Castle;🍬|糖果|Candy;🎊|五彩纸屑|Confetti Ball;🎉|派对拉炮|Party Popper;🎈|气球|Balloon;🎁|礼物|Gift;🧦|袜子|Sock;🎭|戏剧面具|Theater Masks;🛷|雪橇|Sled;⚽|玩具足球|Toy Soccer;🏀|玩具篮球|Toy Basketball;🥏|飞盘|Frisbee"), bugsbirds: PP("🦋|蝴蝶|Butterfly;🐛|毛毛虫|Caterpillar;🐜|蚂蚁|Ant;🐝|蜜蜂|Bee;🐞|瓢虫|Ladybug;🦗|蟋蟀|Cricket;🕷️|蜘蛛|Spider;🦂|蝎子|Scorpion;🦟|蚊子|Mosquito;🐌|蜗牛|Snail;🦐|小虾|Shrimp;🦀|螃蟹|Crab;🐦|小鸟|Bird;🐤|小鸡|Chick;🐣|孵化小鸡|Hatching Chick;🐥|站立小鸡|Baby Chick;🐧|企鹅|Penguin;🦅|老鹰|Eagle;🦆|鸭子|Duck;🦢|天鹅|Swan;🦉|猫头鹰|Owl;🦩|火烈鸟|Flamingo;🦜|鹦鹉|Parrot;🦚|孔雀|Peacock;🦃|火鸡|Turkey;🐔|母鸡|Chicken;🐓|公鸡|Rooster;🕊️|鸽子|Dove;🦇|蝙蝠|Bat;🥚|鸡蛋|Egg;🕸️|蜘蛛网|Spider Web;🦎|蜥蜴|Lizard;🐢|乌龟|Turtle;🐸|青蛙|Frog;🐍|小蛇|Snake;🌿|树叶|Leaf;🌳|大树|Tree;🌸|樱花|Blossom;🌻|向日葵|Sunflower;🌷|郁金香|Tulip;🍃|绿叶|Green Leaf;🌱|嫩芽|Sprout;🌼|雏菊|Daisy;🌺|扶桑花|Hibiscus;🍄|蘑菇|Mushroom;🌈|彩虹|Rainbow;💧|水滴|Droplet"), weather: PP("☀️|晴天|Sunny;🌤️|多云转晴|Mostly Sunny;⛅|多云|Partly Cloudy;☁️|阴天|Cloudy;🌧️|下雨|Rainy;⛈️|雷阵雨|Thunderstorm;🌩️|闪电|Lightning;🌦️|太阳雨|Sun Shower;🌨️|下雪|Snowy;❄️|雪花|Snowflake;☃️|雪人|Snowman;⛄|小雪人|Snowman;🌬️|大风|Wind;💨|疾风|Gust;🌪️|龙卷风|Tornado;🌫️|大雾|Fog;🌈|彩虹|Rainbow;🌊|海浪|Wave;💧|雨滴|Raindrop;💦|水花|Splash;🔥|火焰|Fire;🌋|火山|Volcano;🏔️|雪山|Snow Mountain;⛰️|山峰|Mountain;🏝️|海岛|Island;🏖️|沙滩|Beach;🏜️|沙漠|Desert;🌅|日出|Sunrise;🌄|山间日出|Mountain Sunrise;🌇|日落|Sunset;🌆|黄昏城市|City Dusk;🌃|夜晚|Night;🌌|银河|Galaxy;🌙|月亮|Moon;🌟|闪亮星|Glowing Star;☄️|彗星|Comet;🪐|行星|Planet;🌡️|温度计|Thermometer;🧊|冰块|Ice;🌀|旋风|Cyclone;🌸|樱花|Blossom;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🌱|新芽|Sprout;🌴|棕榈树|Palm;🌵|仙人掌|Cactus;🎋|竹子|Bamboo;🌾|稻田|Rice Field;🌻|向日葵|Sunflower;🌷|郁金香|Tulip"), pets: PP("🐶|小狗|Dog;🐱|小猫|Cat;🐭|仓鼠|Hamster;🐰|兔子|Rabbit;🦊|狐狸|Fox;🐻|小熊|Bear;🐼|熊猫|Panda;🐨|考拉|Koala;🐯|老虎|Tiger;🦁|狮子|Lion;🐷|小猪|Pig;🐸|青蛙|Frog;🐵|猴子|Monkey;🐔|小鸡|Chicken;🐧|企鹅|Penguin;🐦|小鸟|Bird;🦆|鸭子|Duck;🦉|猫头鹰|Owl;🐺|小狼|Wolf;🐗|野猪|Boar;🐴|小马|Horse;🦄|独角兽|Unicorn;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐌|蜗牛|Snail;🐞|瓢虫|Ladybug;🐠|金鱼|Goldfish;🐟|小鱼|Fish;🐢|乌龟|Turtle;🦎|蜥蜴|Lizard;🐙|章鱼|Octopus;🦜|鹦鹉|Parrot;🐩|贵宾犬|Poodle;🐕|狗狗|Dog;🐈|猫咪|Cat;🐖|小猪|Pig;🦮|导盲犬|Guide Dog;🐑|绵羊|Sheep;🕊️|鸽子|Dove;🦩|火烈鸟|Flamingo;🦚|孔雀|Peacock;🦢|天鹅|Swan;🦥|树懒|Sloth;🦦|水獭|Otter;🦨|臭鼬|Skunk;🦘|袋鼠|Kangaroo;🦡|獾|Badger;🐾|爪印|Paw Prints;🦴|骨头|Bone;🎾|网球|Tennis Ball;🧶|毛线球|Yarn Ball"), festival: PP("🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🤶|圣诞奶奶|Mrs. Claus;🦌|驯鹿|Reindeer;⛄|雪人|Snowman;🎁|礼物|Gift;🔔|铃铛|Bell;🕯️|蜡烛|Candle;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|红灯笼|Red Lantern;🧧|红包|Red Envelope;🐉|龙|Dragon;🦁|舞狮|Lion Dance;🥮|月饼|Mooncake;🌕|满月|Full Moon;🐰|玉兔|Jade Rabbit;🎃|南瓜灯|Jack-o-Lantern;👻|幽灵|Ghost;🦇|蝙蝠|Bat;🕸️|蜘蛛网|Spider Web;🍬|糖果|Candy;🎭|面具|Mask;🎉|派对|Party;🎊|彩带球|Confetti;🎈|气球|Balloon;🥂|干杯|Cheers;🍾|香槟|Champagne;🎂|生日蛋糕|Birthday Cake;🕎|烛台|Menorah;🪔|油灯|Diya Lamp;🌙|弯月|Crescent Moon;🌟|闪亮星|Glowing Star;🎋|七夕竹|Tanabata;🎍|门松|Kadomatsu;🌸|樱花|Cherry Blossom;🎏|鲤鱼旗|Carp Streamer;🎐|风铃|Wind Chime;🥚|彩蛋|Easter Egg;🐣|复活节小鸡|Easter Chick;🐇|复活节兔子|Easter Bunny;🍫|巧克力|Chocolate;💝|爱心礼物|Heart Gift;💐|花束|Bouquet;🌹|玫瑰|Rose;👑|皇冠|Crown;🏆|奖杯|Trophy;🎖️|勋章|Medal;🎶|音乐|Music"), jobs: PP("🩺|听诊器|Stethoscope;💉|注射器|Syringe;💊|药丸|Pill;🌡️|温度计|Thermometer;🔬|显微镜|Microscope;🧪|试管|Test Tube;🧫|培养皿|Petri Dish;🔭|望远镜|Telescope;🚀|火箭|Rocket;✈️|飞机|Airplane;🚁|直升机|Helicopter;🚒|消防车|Fire Truck;🚓|警车|Police Car;🚑|救护车|Ambulance;🚜|拖拉机|Tractor;🚚|货车|Truck;🔧|扳手|Wrench;🔨|锤子|Hammer;⚙️|齿轮|Gear;🧰|工具箱|Toolbox;🍳|煎锅|Cooking Pan;🔪|菜刀|Kitchen Knife;🎨|调色板|Palette;🖌️|画笔|Paintbrush;✏️|铅笔|Pencil;📏|尺子|Ruler;✂️|剪刀|Scissors;📚|书本|Books;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;📷|相机|Camera;🎥|摄像机|Movie Camera;💼|公文包|Briefcase;🏥|医院|Hospital;🏫|学校|School;🏭|工厂|Factory;⛏️|镐子|Pick;🪓|斧头|Axe;⚖️|天平|Scales;🧲|磁铁|Magnet;🔩|螺母螺栓|Nut and Bolt;📐|三角尺|Triangular Ruler;📊|柱状图|Bar Chart;🩹|创可贴|Bandage;🧯|灭火器|Fire Extinguisher;🦺|安全背心|Safety Vest;⛑️|救援头盔|Rescue Helmet;🥽|护目镜|Goggles;🥼|实验服|Lab Coat;🧤|手套|Gloves;🎓|毕业帽|Graduation Cap;📋|剪贴板|Clipboard;🚢|轮船|Ship;🚂|火车|Train;🏗️|建筑工地|Construction;🛠️|锤子扳手|Hammer and Wrench;🌾|稻穗|Sheaf of Rice"), shapes: PP("🔴|红圆形|Red Circle;🟠|橙圆形|Orange Circle;🟡|黄圆形|Yellow Circle;🟢|绿圆形|Green Circle;🔵|蓝圆形|Blue Circle;🟣|紫圆形|Purple Circle;⚫|黑圆形|Black Circle;⚪|白圆形|White Circle;🟤|棕圆形|Brown Circle;🟥|红方形|Red Square;🟧|橙方形|Orange Square;🟨|黄方形|Yellow Square;🟩|绿方形|Green Square;🟦|蓝方形|Blue Square;🟪|紫方形|Purple Square;⬛|黑方形|Black Square;⬜|白方形|White Square;🟫|棕方形|Brown Square;❤️|红爱心|Red Heart;🧡|橙爱心|Orange Heart;💛|黄爱心|Yellow Heart;💚|绿爱心|Green Heart;💙|蓝爱心|Blue Heart;💜|紫爱心|Purple Heart;🖤|黑爱心|Black Heart;🤍|白爱心|White Heart;🤎|棕爱心|Brown Heart;⭐|星星|Star;🌟|闪亮星星|Glowing Star;💠|蓝色菱形|Blue Diamond;🔷|大蓝菱形|Large Blue Diamond;🔶|大橙菱形|Large Orange Diamond;🔹|小蓝菱形|Small Blue Diamond;🔸|小橙菱形|Small Orange Diamond;🔺|红三角|Red Triangle Up;🔻|红倒三角|Red Triangle Down;🔼|上三角|Triangle Up;🔽|下三角|Triangle Down;🌕|圆月亮|Full Moon;🌙|弯月亮|Crescent Moon;☀️|太阳|Sun;⭕|红圆圈|Red Circle Mark;🔳|白方按钮|White Square Button;🔲|黑方按钮|Black Square Button"), numbers: PP("0|数字 0|Number 0;1|数字 1|Number 1;2|数字 2|Number 2;3|数字 3|Number 3;4|数字 4|Number 4;5|数字 5|Number 5;6|数字 6|Number 6;7|数字 7|Number 7;8|数字 8|Number 8;9|数字 9|Number 9;10|数字 10|Number 10;11|数字 11|Number 11;12|数字 12|Number 12;13|数字 13|Number 13;14|数字 14|Number 14;15|数字 15|Number 15;16|数字 16|Number 16;17|数字 17|Number 17;18|数字 18|Number 18;19|数字 19|Number 19;20|数字 20|Number 20;21|数字 21|Number 21;22|数字 22|Number 22;23|数字 23|Number 23;24|数字 24|Number 24;25|数字 25|Number 25;26|数字 26|Number 26;27|数字 27|Number 27;28|数字 28|Number 28;29|数字 29|Number 29;30|数字 30|Number 30"), letters: PP("A|字母 A|Letter A;B|字母 B|Letter B;C|字母 C|Letter C;D|字母 D|Letter D;E|字母 E|Letter E;F|字母 F|Letter F;G|字母 G|Letter G;H|字母 H|Letter H;I|字母 I|Letter I;J|字母 J|Letter J;K|字母 K|Letter K;L|字母 L|Letter L;M|字母 M|Letter M;N|字母 N|Letter N;O|字母 O|Letter O;P|字母 P|Letter P;Q|字母 Q|Letter Q;R|字母 R|Letter R;S|字母 S|Letter S;T|字母 T|Letter T;U|字母 U|Letter U;V|字母 V|Letter V;W|字母 W|Letter W;X|字母 X|Letter X;Y|字母 Y|Letter Y;Z|字母 Z|Letter Z"), emotions: PP("😀|开心大笑|Grinning;😃|笑眼|Big Smile;😄|眯眼笑|Happy Smile;😁|露齿笑|Beaming;😆|大笑|Laughing;😅|流汗笑|Sweaty Smile;😂|笑哭|Tears of Joy;🤣|笑倒|Rolling Laugh;😊|微笑|Smiling;😇|天使笑|Angel Smile;🙂|淡淡笑|Slight Smile;🙃|倒脸笑|Upside Down;😉|眨眼|Winking;😌|安心|Relieved;😍|爱心眼|Heart Eyes;🥰|幸福笑|Loved Smile;😘|飞吻|Blowing Kiss;😗|亲亲|Kissing;😙|闭眼亲|Kiss Smile;😚|害羞亲|Shy Kiss;😋|好吃脸|Yummy;😛|吐舌头|Tongue Out;😝|调皮脸|Silly Face;😜|眨眼吐舌|Winking Tongue;🤪|搞怪脸|Zany Face;😎|墨镜脸|Cool Shades;🥳|派对脸|Party Face;😏|得意脸|Smirk;🙄|翻白眼|Eye Roll;😬|龇牙脸|Grimacing;🤗|拥抱脸|Hugging;🤔|思考脸|Thinking;🤭|捂嘴笑|Giggling;🤫|嘘声脸|Shushing;😴|睡觉脸|Sleepy;😪|困倦脸|Drowsy;🥱|打哈欠|Yawning;😷|口罩脸|Mask Face;🤒|生病脸|Sick Face;🥴|晕乎脸|Woozy;😵|晕倒脸|Dizzy;🤯|爆炸头|Exploding Head;🥵|热脸|Hot Face;🥶|冷脸|Cold Face;😱|惊吓脸|Screaming;😨|害怕脸|Fearful;😰|焦虑脸|Anxious;😢|流泪脸|Crying;😭|大哭脸|Loudly Crying;🥺|委屈脸|Pleading"), body: PP("👀|眼睛|Eyes;👁️|一只眼睛|Eye;👂|耳朵|Ear;👃|鼻子|Nose;👄|嘴巴|Mouth;👅|舌头|Tongue;🦷|牙齿|Tooth;🧠|大脑|Brain;❤️|心脏|Heart;🦴|骨头|Bone;💪|手臂肌肉|Strong Arm;✋|手掌|Raised Hand;🤚|手背|Back of Hand;🖐️|五指张开|Open Hand;🖖|打招呼手|Vulcan Hand;👌|OK 手势|OK Hand;🤏|捏一捏|Pinching Hand;✌️|胜利手势|Victory Hand;🤞|许愿手势|Crossed Fingers;🤟|我爱你手势|Love-You Hand;🤙|打电话手势|Call-Me Hand;👍|大拇指赞|Thumbs Up;👎|大拇指倒|Thumbs Down;👊|拳头|Fist;✊|握拳|Raised Fist;👏|拍手|Clapping;🙌|举手欢呼|Raised Hands;👐|拥抱手|Open Hands;🤲|双手托起|Palms Up;🙏|合十手|Folded Hands;✍️|写字手|Writing Hand;💅|涂指甲|Nail Polish;🦵|大腿|Leg;🦶|脚丫|Foot;👣|脚印|Footprints;🦾|机械手臂|Mechanical Arm"), clothes: PP("👕|T恤|T-Shirt;👖|牛仔裤|Jeans;👗|连衣裙|Dress;👔|衬衫领带|Shirt and Tie;👚|女装上衣|Blouse;👘|和服|Kimono;🥻|纱丽|Sari;🩱|连体泳衣|Swimsuit;🩳|短裤|Shorts;👞|皮鞋|Dress Shoe;👟|运动鞋|Sneaker;🥾|靴子|Hiking Boot;🥿|平底鞋|Flat Shoe;👠|高跟鞋|High Heel;👡|凉鞋|Sandal;👢|长靴|Boot;👒|草帽|Sun Hat;🎩|礼帽|Top Hat;🧢|棒球帽|Cap;👑|皇冠|Crown;👓|眼镜|Glasses;🕶️|墨镜|Sunglasses;🥽|护目镜|Goggles;🧣|围巾|Scarf;🧤|手套|Gloves;🧥|外套|Coat;🥼|白大褂|Lab Coat;🦺|安全背心|Safety Vest;⛑️|头盔|Helmet;🎒|双肩包|Backpack;👝|手包|Clutch;👛|钱包|Purse;👜|手提包|Handbag;💼|公文包|Briefcase;🌂|雨伞|Umbrella;☂️|撑开的伞|Open Umbrella;🧦|袜子|Socks;🩰|芭蕾舞鞋|Ballet Shoes"), home: PP("🛏️|床|Bed;🛋️|沙发|Sofa;🪑|椅子|Chair;🚪|门|Door;🛁|浴缸|Bathtub;🚿|淋浴|Shower;🚽|马桶|Toilet;🧻|卷纸|Toilet Paper;🧴|乳液瓶|Lotion Bottle;🧼|肥皂|Soap;🧽|海绵|Sponge;🧺|篮子|Basket;🧹|扫帚|Broom;🔑|钥匙|Key;🗝️|老钥匙|Old Key;✂️|剪刀|Scissors;🧷|别针|Safety Pin;🧵|线轴|Thread;🕯️|蜡烛|Candle;🔦|手电筒|Flashlight;💡|灯泡|Light Bulb;⏰|闹钟|Alarm Clock;🕰️|座钟|Mantel Clock;📺|电视|Television;📻|收音机|Radio;📱|手机|Phone;☎️|电话|Telephone;💻|电脑|Laptop;⌨️|键盘|Keyboard;🖨️|打印机|Printer;🖱️|鼠标|Mouse;📚|书本|Books;✏️|铅笔|Pencil;🍽️|餐盘|Plate Setting;🥄|勺子|Spoon;🍴|叉子|Fork;🥢|筷子|Chopsticks;🍵|茶杯|Teacup;☕|咖啡杯|Coffee Cup;🧸|泰迪熊|Teddy Bear;🖼️|相框|Picture Frame;🗓️|日历|Calendar;🛒|购物车|Shopping Cart;🧰|工具箱|Toolbox;🔧|扳手|Wrench;🔨|锤子|Hammer;🔩|螺丝|Bolt;🧯|灭火器|Fire Extinguisher;🧲|磁铁|Magnet;🔔|铃铛|Bell"), farm: PP("🐄|奶牛|Cow;🐖|猪|Pig;🐎|马|Horse;🐏|公羊|Ram;🐐|山羊|Goat;🐓|公鸡|Rooster;🐔|母鸡|Chicken;🐣|小鸡宝宝|Baby Chick;🐤|小鸡|Chick;🦆|鸭子|Duck;🐕|农场狗|Farm Dog;🐈|农场猫|Farm Cat;🐇|兔子|Rabbit;🦃|火鸡|Turkey;🐂|公牛|Ox;🐃|水牛|Water Buffalo;🐮|牛脸|Cow Face;🐷|猪脸|Pig Face;🐴|马脸|Horse Face;🐑|绵羊|Sheep;🐰|兔脸|Rabbit Face;🐶|狗脸|Dog Face;🐱|猫脸|Cat Face;🐭|老鼠|Mouse;🦊|狐狸|Fox;🌾|稻穗|Rice Sheaf;🌽|玉米|Corn;🥕|胡萝卜|Carrot;🥔|土豆|Potato;🍠|红薯|Sweet Potato;🎃|南瓜|Pumpkin;🍎|苹果|Apple;🍐|梨子|Pear;🍓|草莓|Strawberry;🍇|葡萄|Grapes;🍉|西瓜|Watermelon;🍅|番茄|Tomato;🥒|黄瓜|Cucumber;🥬|青菜|Lettuce;🌻|向日葵|Sunflower;🚜|拖拉机|Tractor;🥚|鸡蛋|Egg;🥛|牛奶|Milk;🧀|奶酪|Cheese;🌱|秧苗|Seedling;🐝|蜜蜂|Bee;🦋|蝴蝶|Butterfly;🐞|瓢虫|Ladybug;🏡|农舍|Farm House;🧺|采摘篮|Basket"), seasons: PP("🌸|樱花|Cherry Blossom;🌷|郁金香|Tulip;🌹|玫瑰|Rose;🌻|向日葵|Sunflower;🌼|小雏菊|Daisy;🌺|扶桑花|Hibiscus;🌱|新芽|Sprout;🌿|绿叶|Herb;🍀|四叶草|Clover;🌈|彩虹|Rainbow;☀️|太阳|Sun;🌤️|晴天|Sunny Day;⛅|多云|Partly Cloudy;🏖️|沙滩|Beach;🍉|西瓜|Watermelon;🍦|冰淇淋|Ice Cream;🕶️|墨镜|Sunglasses;⛱️|沙滩伞|Beach Umbrella;🌊|海浪|Wave;🏄|冲浪|Surfing;🍁|枫叶|Maple Leaf;🍂|落叶|Fallen Leaves;🍃|飘叶|Leaf in Wind;🎃|南瓜|Pumpkin;🌾|稻田|Rice Field;🍎|苹果|Apple;🍐|梨|Pear;🍇|葡萄|Grapes;🌰|栗子|Chestnut;🍄|蘑菇|Mushroom;❄️|雪花|Snowflake;☃️|大雪人|Big Snowman;⛄|雪人|Snowman;🌨️|下雪|Snowfall;🧣|围巾|Scarf;🧤|手套|Gloves;🎄|圣诞树|Christmas Tree;🎅|圣诞老人|Santa;🦌|驯鹿|Reindeer;🔥|篝火|Fire;☕|热咖啡|Hot Coffee;🍵|热茶|Hot Tea;🌙|月亮|Moon;⭐|星星|Star;🎆|烟花|Fireworks;🎇|烟花棒|Sparkler;🧨|鞭炮|Firecracker;🏮|灯笼|Lantern;🌕|满月|Full Moon;🥮|月饼|Mooncake"), school: PP("📚|书堆|Books;📖|打开的书|Open Book;📓|笔记本|Notebook;📒|账本|Ledger;📔|日记本|Diary;📕|红书|Red Book;📗|绿书|Green Book;📘|蓝书|Blue Book;📙|橙书|Orange Book;📝|备忘录|Memo;✏️|铅笔|Pencil;✒️|钢笔尖|Pen Nib;🖊️|圆珠笔|Pen;🖋️|钢笔|Fountain Pen;🖍️|蜡笔|Crayon;📏|直尺|Ruler;📐|三角尺|Triangle Ruler;✂️|剪刀|Scissors;📌|图钉|Pushpin;📍|圆图钉|Round Pin;📎|回形针|Paperclip;🖇️|连环回形针|Linked Clips;📋|写字板|Clipboard;📁|文件夹|Folder;📂|打开的文件夹|Open Folder;🎒|书包|Backpack;🔔|上课铃|School Bell;🔍|放大镜|Magnifier;🧲|磁铁|Magnet;🌍|地球仪|Globe;🎨|调色盘|Art Palette;🖌️|画笔|Paintbrush;⚽|足球|Soccer Ball;🏀|篮球|Basketball;🎵|音符|Music Note;📷|相机|Camera;⏰|闹钟|Alarm Clock;💡|灯泡|Light Bulb;🔑|钥匙|Key;🧮|算盘|Abacus;🔬|显微镜|Microscope;🔭|望远镜|Telescope;🧪|试管|Test Tube;📊|图表|Chart;🗺️|地图|Map;🖥️|台式电脑|Desktop;💻|笔记本电脑|Laptop;⌨️|键盘|Keyboard;🖱️|鼠标|Mouse;🗑️|废纸篓|Waste Basket") };
+const PACK_TOTAL = 1233;
+
+const FIT = { cat:1.2, rabbit:1.09, bear:1.34, frog:1.46, triceratops:1.04, sauropod:1.04, pterosaur:1.08, trex:1.04, octopus:1.48, whale:1.01, crab:1.02, fish:1.16, turtle:1.05, rocket:1.08, planet:1.19, moon:1.13, cow:1.08, pig:1.28, chick:1.09, duck:1.01, apple:1.13, strawberry:1.26, watermelon:1.19, banana:1.19, carrot:1.1, car:1.19, bus:1.19, train:1.1, plane:0.98, boat:1.08, penguin:1.08, elephant:1.02, shoe:1.05, socks:1.05, dress:1.05, butterfly:1.18, ladybug:1.15, owl:1.08, bee:1.12, snake:1.05, flower:1.12, cloud:1.15 };
+
+/* ===== 文案 ===== */
+const STR = {
+  zh: { settings:"设置", difficulty:"难度", d1:"入门", d2:"简单", d3:"中等", d4:"困难", d5:"挑战",
+    theme:"图案主题", shadowStyle:"影子样式", solid:"实心", outline:"描边", rounds:"一轮题数", hint:"答错提示", fx:"特效", fxRich:"丰富", fxSimple:"简约",
+    sound:"音效", language:"语言", bg:"背景颜色", on:"开", off:"关", done:"好了，开始玩", back:"返回",
+    change:"更换", prevPage:"上一页", nextPage:"下一页",
+    random:"🎲 随机", curated:"精选图案", packs:"主题包",
+    themeNow:"本轮主题", findShadow:"找一找它的影子！",
+    winTitle:"全部配对成功！", again:"再来一轮", newSet:"换一组",
+    winSub:n => "这一轮收集了 " + n + " 个好朋友 ⭐",
+    praise:["太棒了！","找到了！","好厉害！","就是它！","真聪明！","配对成功！"],
+    cheer:["没关系，再看看～","慢慢来，你可以的！","再试一次吧！","仔细看看形状哦～","就快找到了！"],
+    roundOf:(a,b)=> a + " / " + b },
+  en: { settings:"Settings", difficulty:"Difficulty", d1:"Starter", d2:"Easy", d3:"Medium", d4:"Hard", d5:"Challenge",
+    theme:"Picture Theme", shadowStyle:"Shadow Style", solid:"Solid", outline:"Outline", rounds:"Questions per Round", hint:"Hint after Mistakes", fx:"Effects", fxRich:"Lots", fxSimple:"Simple",
+    sound:"Sound", language:"Language", bg:"Background", on:"On", off:"Off", done:"Done — Play!", back:"Back",
+    change:"Change", prevPage:"Prev", nextPage:"Next",
+    random:"🎲 Random", curated:"Curated Pictures", packs:"Theme Packs",
+    themeNow:"This round", findShadow:"Find its shadow!",
+    winTitle:"All matched!", again:"Play Again", newSet:"New Set",
+    winSub:n => "You collected " + n + " friends this round ⭐",
+    praise:["Great job!","You found it!","Amazing!","That's it!","So clever!","Matched!"],
+    cheer:["That's okay, look again~","Take your time, you can do it!","Try once more!","Look at the shape closely~","Almost there!"],
+    roundOf:(a,b)=> a + " / " + b }
+};
+const BG_KEYS = ["cream","pink","sky","mint"];
+const BG_NAMES = { cream:{zh:"奶油黄",en:"Cream"}, pink:{zh:"樱花粉",en:"Pink"}, sky:{zh:"天空蓝",en:"Sky"}, mint:{zh:"薄荷绿",en:"Mint"} };
+const DIFF_N = { 1:2, 2:3, 3:4, 4:5, 5:6 };
+const TEXT_PACKS = { numbers:1, letters:1 };
+
+/* ===== 设置（本游戏独立键） ===== */
+const LS_KEY = "shadowmatch.settings.v1";
+const DEFAULTS = { diff:3, theme:"random", rounds:8, hint:true, fx:"rich", sound:true, lang:"zh", bg:"random", shadowStyle:"solid" };
+let settings = Object.assign({}, DEFAULTS);
+try { const raw = localStorage.getItem(LS_KEY); if (raw) settings = Object.assign({}, DEFAULTS, JSON.parse(raw)); } catch(e) {}
+function saveSettings(){ try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch(e) {} }
+
+/* ===== 工具 ===== */
+const $ = id => document.getElementById(id);
+const app = $("app");
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+function shuffle(arr){ const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function centerOf(el){ const r = el.getBoundingClientRect(), ar = app.getBoundingClientRect(); return { x:r.left-ar.left+r.width/2, y:r.top-ar.top+r.height/2 }; }
+
+/* ===== 素材池：统一成 {key, zh, en, group, svg?, emoji?, glyph?, text?} ===== */
+const CAT_ICONS = { animals:"🦁", ocean:"🐳", dino:"🦕", space:"🚀", farm:"🐷", fruitveg:"🍎", vehicles:"🚗", daily:"🎈", food:"🍞", clothes:"👕", music:"🎵", sports:"⚽", nature:"🌿" };
+const ALL_THEMES = [{ key:"random", zh:"随机", en:"Random" }]
+  .concat(Object.keys(CATS).map(k => ({ key:"cat:"+k, zh:(CAT_ICONS[k]||"🎨")+" "+CATS[k].zh, en:(CAT_ICONS[k]||"🎨")+" "+CATS[k].en, group:"curated" })))
+  .concat(PACK_META.map(m => ({ key:"pack:"+m[0], zh:m[1]+" "+m[2], en:m[1]+" "+m[3], group:"packs" })));
+function themeName(key){ const t = ALL_THEMES.find(t=>t.key===key); if(!t) return ""; return settings.lang==="en" ? t.en : t.zh; }
+
+function buildPool(themeKey){
+  const pool = [];
+  if (themeKey.indexOf("cat:") === 0) {
+    const cat = themeKey.slice(4);
+    ASSETS.filter(a=>a.cat===cat).forEach(a=> pool.push({ key:"c:"+a.id, zh:a.zh, en:a.en, group:cat, svg:a.svg, emoji:a.emoji, fit:FIT[a.id]||1 }));
+  } else if (themeKey.indexOf("pack:") === 0) {
+    const pk = themeKey.slice(5), seen = {};
+    (PACKS[pk]||[]).forEach((it,i)=>{ if (seen[it.g]) return; seen[it.g]=1;
+      pool.push({ key:"p:"+pk+":"+i, zh:it.zh, en:it.en, group:pk, glyph:it.g, text:!!TEXT_PACKS[pk] }); });
+  }
+  return pool;
+}
+function artHTML(item){
+  if (item.svg) { const st = item.fit && item.fit!==1 ? ' style="transform:scale('+item.fit+')"' : ""; return '<span'+st+'>'+item.svg+'</span>'; }
+  if (item.emoji) return '<span class="emoji">'+item.emoji+'</span>';
+  if (item.text) return '<span class="glyph-text">'+item.glyph+'</span>';
+  return '<span class="emoji">'+item.glyph+'</span>';
+}
+function itemName(item){ return settings.lang==="en" ? item.en : item.zh; }
+/* ===== 轮廓类别：同一轮内目标与所有选项的剪影外形不得重复 =====
+   圆形类是重点：所有球类（足球/篮球/网球/排球/棒球/垒球/台球/保龄球）与近圆图案
+   （橙子、苹果、太阳、地球、满月、番茄、桃子、甜瓜、南瓜、椰子、饼干、甜甜圈、各色圆点）
+   统一归 "round"，每轮最多出现一个；方形、爱心、星形、菱形、三角形同理各归一类。
+   其余图案剪影各不相同，按自身 key 归唯一类，互不误伤。 */
+const SIL_ROUND_IDS = ["soccer","basketball","tennis","volleyball","baseball","bowling","orange","apple","sun","earth","fullmoon","melon","peach","tomato","pumpkin","coconut","cookie","donut"];
+const SIL_ROUND_GLYPHS = ["⚽","🏀","⚾","🎾","🏐","🥎","🎱","🎳","🍊","🍎","🍏","🍑","🍅","🍈","🥥","🎃","🍪","🍩","🌞","☀️","🌕","🌍","🌎","🌏","🔴","🟠","🟡","🟢","🔵","🟣","⚫","⚪","🟤","⭕","🧆"];
+const SIL_CLASS_GLYPHS = [
+  ["square","🟥","🟧","🟨","🟩","🟦","🟪","⬛","⬜","🟫","🔳","🔲"],
+  ["heart","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💝"],
+  ["starshape","⭐","🌟","💫","✨"],
+  ["diamond","💠","🔷","🔶","🔹","🔸"],
+  ["triangle","🔺","🔻","🔼","🔽"]
+];
+function silhouetteClass(item){
+  if (item.key && item.key.indexOf("c:") === 0 && SIL_ROUND_IDS.indexOf(item.key.slice(2)) >= 0) return "round";
+  const g = item.glyph || item.emoji || "";
+  if (g) {
+    if (SIL_ROUND_GLYPHS.indexOf(g) >= 0) return "round";
+    for (let i = 0; i < SIL_CLASS_GLYPHS.length; i++)
+      if (SIL_CLASS_GLYPHS[i].indexOf(g) >= 0) return SIL_CLASS_GLYPHS[i][0];
+  }
+  return "uniq:" + item.key;
+}
+/* 描边版 SVG：所有填充去掉、只留描边轮廓 */
+function outlineSVG(svg){
+  return svg.replace(/fill="[^"]*"/g, 'fill="none"').replace(/stroke="#7a5c3e"/g, 'stroke="#5b4632"');
+}
+function outlineArtHTML(item){
+  if (item.svg) { const st = item.fit && item.fit!==1 ? ' style="transform:scale('+item.fit+')"' : ""; return '<span'+st+'>'+outlineSVG(item.svg)+'</span>'; }
+  if (item.emoji) return '<span class="emoji outline-glyph">'+item.emoji+'</span>';
+  if (item.text) return '<span class="glyph-text outline-glyph">'+item.glyph+'</span>';
+  return '<span class="emoji outline-glyph">'+item.glyph+'</span>';
+}
+/* 剪影：实心=同一张图叠印 4 层变黑，只剩形状；描边=只显示轮廓线、内部透明 */
+function shadowHTML(item){
+  if (settings.shadowStyle === "outline") return '<div class="art">' + outlineArtHTML(item) + '</div>';
+  const h = artHTML(item);
+  return '<div class="art-stack"><div class="art">'+h+'</div><div class="art">'+h+'</div><div class="art">'+h+'</div><div class="art">'+h+'</div></div>';
+}
+
+/* ===== 特效库 ===== */
+const fxLayer = $("fxLayer");
+const CONF_COLORS = ["#f6c6d3","#f9e29c","#c4e6cd","#bfe0f2","#ddd0ee","#f7b267"];
+function confettiAt(x, y, n){
+  for (let i=0;i<n;i++){
+    const d = document.createElement("div"); d.className="confetti";
+    const size = 6+Math.random()*6;
+    d.style.cssText = "left:"+x+"px;top:"+y+"px;width:"+size+"px;height:"+size*0.62+"px;background:"+pick(CONF_COLORS);
+    fxLayer.appendChild(d);
+    const dx=(Math.random()-0.5)*200, up=-(30+Math.random()*70), down=95+Math.random()*85, rot=(Math.random()-0.5)*540;
+    const a = d.animate([
+      { transform:"translate(0,0) rotate(0deg)", opacity:1 },
+      { transform:"translate("+(dx*0.6)+"px,"+up+"px) rotate("+(rot*0.6)+"deg)", opacity:1, offset:0.35 },
+      { transform:"translate("+dx+"px,"+down+"px) rotate("+rot+"deg)", opacity:0 }
+    ], { duration:850+Math.random()*350, easing:"cubic-bezier(.2,.7,.3,1)" });
+    a.onfinish = ()=> d.remove();
+  }
+}
+function starRain(n){
+  const w = app.clientWidth;
+  for (let i=0;i<n;i++){
+    const s = document.createElement("div"); s.className="fx-particle"; s.textContent="⭐";
+    const x = Math.random()*w;
+    s.style.cssText = "left:"+x+"px;top:-36px;font-size:"+(20+Math.random()*16)+"px";
+    fxLayer.appendChild(s);
+    const a = s.animate([
+      { transform:"translateY(0) rotate(0deg)", opacity:1 },
+      { transform:"translateY("+(app.clientHeight*0.55+Math.random()*120)+"px) rotate("+(Math.random()*260-130)+"deg)", opacity:0 }
+    ], { duration:1100+Math.random()*500, delay:Math.random()*250, easing:"ease-in" });
+    a.onfinish = ()=> s.remove();
+  }
+}
+function bubblesUp(n){
+  const w = app.clientWidth;
+  for (let i=0;i<n;i++){
+    const s = document.createElement("div"); s.className="fx-particle";
+    const size = 14+Math.random()*22, x = Math.random()*w;
+    s.style.cssText = "left:"+x+"px;bottom:-30px;width:"+size+"px;height:"+size+"px;border-radius:50%;border:2.5px solid rgba(127,178,221,.75);background:radial-gradient(circle at 32% 30%, rgba(255,255,255,.9), rgba(191,224,242,.25))";
+    fxLayer.appendChild(s);
+    const a = s.animate([
+      { transform:"translate(0,0)", opacity:0.95 },
+      { transform:"translate("+((Math.random()-0.5)*60)+"px,"+(-(app.clientHeight*0.6+Math.random()*100))+"px)", opacity:0 }
+    ], { duration:1300+Math.random()*500, delay:Math.random()*200, easing:"ease-out" });
+    a.onfinish = ()=> s.remove();
+  }
+}
+function rainbowTrail(){
+  const w = app.clientWidth, y0 = app.clientHeight*0.42;
+  const cols = ["#ef8f7a","#f7b267","#f7d774","#8fce6e","#7fb2dd","#c3a6dd"];
+  cols.forEach((c,ci)=>{
+    for (let i=0;i<9;i++){
+      const d = document.createElement("div"); d.className="fx-particle";
+      d.style.cssText = "left:-16px;top:"+(y0+ci*9)+"px;width:13px;height:13px;border-radius:50%;background:"+c;
+      fxLayer.appendChild(d);
+      const a = d.animate([
+        { transform:"translate(0,0)", opacity:1 },
+        { transform:"translate("+(w+40)+"px,"+(-30-ci*4)+"px)", opacity:0.9 }
+      ], { duration:750, delay:i*45+ci*25, easing:"ease-out" });
+      a.onfinish = ()=> d.remove();
+    }
+  });
+}
+function danceFx(){
+  const tc = $("targetCard"); tc.classList.remove("dance"); void tc.offsetWidth; tc.classList.add("dance");
+  const c = centerOf(tc);
+  ["🎵","🎶","🎵"].forEach((g,i)=>{
+    const s = document.createElement("div"); s.className="fx-particle"; s.textContent=g;
+    s.style.cssText = "left:"+(c.x-14+i*26)+"px;top:"+(c.y-30)+"px;font-size:24px";
+    fxLayer.appendChild(s);
+    const a = s.animate([
+      { transform:"translateY(0)", opacity:1 },
+      { transform:"translateY(-64px)", opacity:0 }
+    ], { duration:900, delay:i*130, easing:"ease-out" });
+    a.onfinish = ()=> s.remove();
+  });
+}
+function layeredConfetti(){
+  const w = app.clientWidth, h = app.clientHeight;
+  confettiAt(w*0.5, h*0.35, 16);
+  setTimeout(()=> confettiAt(w*0.25, h*0.5, 12), 140);
+  setTimeout(()=> confettiAt(w*0.75, h*0.5, 12), 280);
+}
+function flyStar(fromEl){
+  const from = centerOf(fromEl), to = centerOf($("starBadge"));
+  const s = document.createElement("div"); s.className="fly-star"; s.textContent="⭐";
+  s.style.left = (from.x-15)+"px"; s.style.top = (from.y-15)+"px";
+  fxLayer.appendChild(s);
+  const a = s.animate([
+    { transform:"translate(0,0) scale(1)", opacity:1 },
+    { transform:"translate("+(to.x-from.x)+"px,"+(to.y-from.y)+"px) scale(.55)", opacity:.9 }
+  ], { duration:550, easing:"cubic-bezier(.3,.6,.4,1)" });
+  a.onfinish = ()=>{ s.remove(); const b=$("starBadge"); b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); };
+}
+function praiseBig(){
+  const p = $("praise"); p.textContent = pick(STR[settings.lang].praise);
+  p.classList.remove("show"); void p.offsetWidth; p.classList.add("show");
+}
+function bigCelebrate(){
+  const w = app.clientWidth, h = app.clientHeight;
+  confettiAt(w*0.3, h*0.4, 22); confettiAt(w*0.7, h*0.4, 22);
+  starRain(10); setTimeout(()=> bubblesUp(8), 250);
+  praiseBig(); GameAudio.win();
+}
+
+/* ===== 气泡 / 横幅 ===== */
+let bubbleTimer = null;
+function showBubble(text, ms){
+  const b = $("mascotBubble"); b.textContent = text; b.classList.add("show");
+  clearTimeout(bubbleTimer); bubbleTimer = setTimeout(()=> b.classList.remove("show"), ms||2100);
+}
+let bannerTimer = null;
+function showBanner(text, ms, rand){
+  const b = $("hintBanner"); b.textContent = text; b.classList.toggle("rand", !!rand); b.classList.add("show");
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(()=> b.classList.remove("show"), ms||2300);
+}
+
+/* ===== 游戏状态 ===== */
+let stars = 0, roundPool = [], questions = [], qIndex = 0, wrongs = 0, locked = false, fxIndex = 0, collected = [];
+let effTheme = "cat:animals", effBg = "cream";
+const FX_ROTATION = ["confetti","starRain","bubbles","rainbow","dance","layered"];
+
+function resolveRound(){
+  effTheme = settings.theme === "random"
+    ? pick(ALL_THEMES.filter(t=>t.key!=="random")).key : settings.theme;
+  effBg = settings.bg === "random" ? pick(BG_KEYS) : settings.bg;
+  app.dataset.bg = effBg;
+  roundPool = buildPool(effTheme);
+  if (roundPool.length < 6) roundPool = buildPool("cat:animals").concat(roundPool);
+}
+function sizeCells(){
+  const n = DIFF_N[settings.diff];
+  const cols = n <= 3 ? n : 3, rows = Math.ceil(n/cols);
+  const availW = Math.min(window.innerWidth, 620) - 32;
+  const cellW = (availW - (cols-1)*10) / cols;
+  const reserved = 330;
+  const cellH = (window.innerHeight - reserved) / (rows + 1);
+  const cell = Math.max(70, Math.min(cellW, cellH, 168));
+  document.documentElement.style.setProperty("--cell", cell + "px");
+  $("options").style.gridTemplateColumns = "repeat(" + cols + ", var(--cell))";
+}
+function pickDistractors(target, count){
+  const same = shuffle(roundPool.filter(x=>x.key!==target.key && x.group===target.group));
+  const diff = shuffle(roundPool.filter(x=>x.key!==target.key && x.group!==target.group));
+  const all = shuffle(roundPool.filter(x=>x.key!==target.key));
+  let ordered;
+  if (settings.diff <= 1) ordered = diff.concat(all);
+  else if (settings.diff === 2) ordered = diff.concat(same, all);
+  else if (settings.diff === 3) ordered = same.slice(0,1).concat(diff, same, all);
+  else ordered = same.concat(all);
+  /* 硬约束：目标与每个选项的轮廓类别互不相同（同为圆形的球类每轮最多一个） */
+  const used = {}; used[silhouetteClass(target)] = 1;
+  const seen = {}, out = [];
+  for (const c of ordered) {
+    if (seen[c.key]) continue; seen[c.key] = 1;
+    const sc = silhouetteClass(c);
+    if (used[sc]) continue;
+    used[sc] = 1; out.push(c);
+    if (out.length >= count) break;
+  }
+  return out;
+}
+function renderDots(){
+  const d = $("dots"); d.innerHTML = "";
+  questions.forEach((q,i)=>{ const s = document.createElement("span");
+    if (i < qIndex) s.className = "done"; else if (i === qIndex) s.className = "now"; d.appendChild(s); });
+  $("roundLabel").textContent = STR[settings.lang].roundOf(Math.min(qIndex+1, questions.length), questions.length);
+}
+function nextQuestion(){
+  wrongs = 0; locked = false;
+  const target = questions[qIndex];
+  const n = DIFF_N[settings.diff];
+  const opts = shuffle([target].concat(pickDistractors(target, n-1)));
+  $("targetArt").innerHTML = artHTML(target);
+  $("targetName").textContent = itemName(target) + " · " + STR[settings.lang].findShadow;
+  const box = $("options"); box.innerHTML = "";
+  opts.forEach(item=>{
+    const b = document.createElement("button");
+    b.className = "opt shadow" + (settings.shadowStyle === "outline" ? " shadow-outline" : ""); b.dataset.key = item.key;
+    b.innerHTML = shadowHTML(item);
+    b.setAttribute("aria-label", itemName(item));
+    b.addEventListener("click", ()=> onPick(b, item, target));
+    box.appendChild(b);
+  });
+  renderDots();
+}
+/* ===== 蒙氏命名卡：配对成功后浮现中文名 + 英文名大字，约 1.5 秒淡出 ===== */
+function showNameCard(item){
+  $("ncZh").textContent = item.zh;
+  $("ncEn").textContent = item.en;
+  const c = $("nameCard"); c.classList.remove("show"); void c.offsetWidth; c.classList.add("show");
+}
+/* ===== 影子试穿：点错的图案变半透明剪影飞到目标影子上叠合，
+   不重合的边缘柔光亮起，停留约 1 秒后轻轻退回；无惩罚、无负面音效 ===== */
+let tryonBusy = false;
+function tryOn(btn, item){
+  if (tryonBusy) return;
+  tryonBusy = true;
+  const targetCard = $("targetCard");
+  const ar = app.getBoundingClientRect();
+  const br = btn.getBoundingClientRect(), tr = targetCard.getBoundingClientRect();
+  const fly = document.createElement("div");
+  fly.className = "tryon-fly";
+  const size = br.width;
+  fly.style.cssText = "left:" + (br.left - ar.left) + "px;top:" + (br.top - ar.top) + "px;width:" + size + "px;height:" + size + "px";
+  fly.innerHTML = '<div class="art">' + shadowHTML(item) + '</div>';
+  /* 试穿剪影不随描边样式变淡边：强制实心叠合才看得清对不齐的边缘 */
+  fly.querySelectorAll(".art").forEach(a => { a.style.filter = "brightness(0)"; a.style.opacity = ".62"; });
+  app.appendChild(fly);
+  const dx = (tr.left + tr.width / 2) - (br.left + br.width / 2);
+  const dy = (tr.top + tr.height / 2) - (br.top + br.height / 2);
+  const scale = tr.width / br.width;
+  const a1 = fly.animate([
+    { transform: "translate(0,0) scale(1)" },
+    { transform: "translate(" + dx + "px," + dy + "px) scale(" + scale + ")" }
+  ], { duration: 480, easing: "cubic-bezier(.3,.7,.3,1)", fill: "forwards" });
+  a1.onfinish = () => {
+    setTimeout(() => {
+      const a2 = fly.animate([
+        { transform: "translate(" + dx + "px," + dy + "px) scale(" + scale + ")", opacity: .62 },
+        { transform: "translate(0,0) scale(1)", opacity: .25 }
+      ], { duration: 520, easing: "cubic-bezier(.3,.7,.3,1)", fill: "forwards" });
+      a2.onfinish = () => { fly.remove(); tryonBusy = false; };
+    }, 1000);
+  };
+}
+function onPick(btn, item, target){
+  if (locked || tryonBusy) return;
+  GameAudio.unlock();
+  if (item.key === target.key) {
+    locked = true;
+    btn.classList.remove("shadow"); btn.classList.add("right");
+    btn.innerHTML = '<div class="art">' + artHTML(item) + '</div>';
+    stars++; $("starCount").textContent = stars;
+    collected.push(target);
+    GameAudio.good();
+    /* 小剧场聚光轻轻亮一下，影子像被照亮一样变彩（按钮已由影子变彩色） */
+    const spot = $("spotlight"); spot.classList.add("lit");
+    setTimeout(()=> spot.classList.remove("lit"), 700);
+    showNameCard(target);
+    if (settings.fx === "rich") {
+      const fx = FX_ROTATION[fxIndex % FX_ROTATION.length]; fxIndex++;
+      const c = centerOf(btn);
+      if (fx === "confetti") confettiAt(c.x, c.y, 18);
+      else if (fx === "starRain") starRain(9);
+      else if (fx === "bubbles") bubblesUp(9);
+      else if (fx === "rainbow") rainbowTrail();
+      else if (fx === "dance") danceFx();
+      else layeredConfetti();
+      flyStar(btn); praiseBig();
+    } else {
+      const c = centerOf(btn); confettiAt(c.x, c.y, 8); flyStar(btn);
+    }
+    setTimeout(()=>{
+      qIndex++;
+      if (qIndex >= questions.length) finishRound(); else nextQuestion();
+    }, 1800);
+  } else {
+    /* 试穿纠错：不惩罚、不变暗，只把图案送去和目标影子叠一叠，让孩子自己看见不合 */
+    tryOn(btn, item);
+    wrongs++;
+    showBubble(pick(STR[settings.lang].cheer));
+    if (settings.hint && wrongs >= 2) {
+      const right = $("options").querySelector('[data-key="'+target.key+'"]');
+      if (right) right.classList.add("hinted");
+    }
+  }
+}
+function finishRound(){
+  renderDots();
+  const L = STR[settings.lang];
+  $("winSub").textContent = L.winSub(collected.length);
+  const g = $("collectGrid"); g.innerHTML = "";
+  collected.forEach(item=>{ const d = document.createElement("div"); d.className="collect-item";
+    d.innerHTML = '<div class="art">' + artHTML(item) + '</div>'; g.appendChild(d); });
+  $("winPanel").classList.add("open");
+  bigCelebrate();
+}
+function startRound(newSet){
+  $("winPanel").classList.remove("open");
+  if (newSet || settings.theme === "random") resolveRound();
+  else { roundPool = buildPool(effTheme); }
+  const count = Math.min(settings.rounds, roundPool.length);
+  questions = shuffle(roundPool).slice(0, count);
+  qIndex = 0; collected = [];
+  $("themePill").textContent = "🎨 " + STR[settings.lang].themeNow + "：" + themeName(effTheme);
+  sizeCells();
+  nextQuestion();
+}
+
+/* ===== 设置 UI ===== */
+function syncSettingsUI(){
+  document.querySelectorAll("#diffSeg button").forEach(b=> b.classList.toggle("on", +b.dataset.diff === settings.diff));
+  document.querySelectorAll("#shadowSeg button").forEach(b=> b.classList.toggle("on", b.dataset.shadow === settings.shadowStyle));
+  document.querySelectorAll("#roundsSeg button").forEach(b=> b.classList.toggle("on", +b.dataset.rounds === settings.rounds));
+  document.querySelectorAll("#hintSeg button").forEach(b=> b.classList.toggle("on", (b.dataset.hint === "on") === settings.hint));
+  document.querySelectorAll("#fxSeg button").forEach(b=> b.classList.toggle("on", b.dataset.fxset === settings.fx));
+  document.querySelectorAll("#soundSeg button").forEach(b=> b.classList.toggle("on", (b.dataset.sound === "on") === settings.sound));
+  document.querySelectorAll("#langSeg button").forEach(b=> b.classList.toggle("on", b.dataset.lang === settings.lang));
+  document.querySelectorAll("#bgSwatches .swatch").forEach(b=> b.classList.toggle("on", b.dataset.bgset === settings.bg));
+  $("themeSummaryText").textContent = settings.theme === "random" ? STR[settings.lang].random : themeName(settings.theme);
+  const sb = $("soundBtn"); sb.textContent = settings.sound ? "🔊" : "🔇"; sb.classList.toggle("off", !settings.sound);
+}
+function applyLang(){
+  const L = STR[settings.lang];
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ const k = el.dataset.i18n; if (L[k]) el.textContent = L[k]; });
+  document.documentElement.lang = settings.lang === "en" ? "en" : "zh";
+  syncSettingsUI();
+}
+/* 主题选择器分页：第 1 页随机+精选分类，第 2–3 页主题包；每页一屏列完、不滚动 */
+const PICKER_PAGES = [
+  { note:"curated", items:() => ALL_THEMES.filter(t=>t.key==="random" || t.group==="curated") },
+  { note:"packs",   items:() => ALL_THEMES.filter(t=>t.group==="packs").slice(0, 13) },
+  { note:"packs",   items:() => ALL_THEMES.filter(t=>t.group==="packs").slice(13) }
+];
+let pickerPage = 0;
+function buildThemeGrid(){
+  const g = $("themeGrid"); const L = STR[settings.lang]; g.innerHTML = "";
+  PICKER_PAGES[pickerPage].items().forEach(t => {
+    const b = document.createElement("button");
+    b.textContent = t.key === "random" ? L.random : (settings.lang === "en" ? t.en : t.zh);
+    b.classList.toggle("on", settings.theme === t.key);
+    b.addEventListener("click", ()=>{ settings.theme = t.key; saveSettings(); syncSettingsUI(); buildThemeGrid(); });
+    g.appendChild(b);
+  });
+  const note = PICKER_PAGES[pickerPage].note === "curated"
+    ? L.curated + " · " + ASSETS.length : L.packs + " · " + PACK_TOTAL;
+  $("themePageNote").textContent = note;
+  $("themePageInfo").textContent = (pickerPage + 1) + " / " + PICKER_PAGES.length;
+  $("themePrev").disabled = pickerPage === 0;
+  $("themeNext").disabled = pickerPage === PICKER_PAGES.length - 1;
+}
+function openThemePicker(){
+  const idx = PICKER_PAGES.findIndex(p => p.items().some(t => t.key === settings.theme));
+  pickerPage = idx >= 0 ? idx : 0;
+  buildThemeGrid();
+  $("themePicker").classList.add("open");
+}
+function setSound(v){ settings.sound = v; GameAudio.setEnabled(v); saveSettings(); syncSettingsUI(); }
+
+$("diffSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-diff]"); if(!b) return; settings.diff = +b.dataset.diff; saveSettings(); syncSettingsUI(); });
+$("shadowSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-shadow]"); if(!b) return; settings.shadowStyle = b.dataset.shadow; saveSettings(); syncSettingsUI(); });
+$("roundsSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-rounds]"); if(!b) return; settings.rounds = +b.dataset.rounds; saveSettings(); syncSettingsUI(); });
+$("hintSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-hint]"); if(!b) return; settings.hint = b.dataset.hint === "on"; saveSettings(); syncSettingsUI(); });
+$("fxSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-fxset]"); if(!b) return; settings.fx = b.dataset.fxset; saveSettings(); syncSettingsUI(); });
+$("soundSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-sound]"); if(!b) return; setSound(b.dataset.sound === "on"); });
+$("langSeg").addEventListener("click", e=>{ const b = e.target.closest("[data-lang]"); if(!b) return; settings.lang = b.dataset.lang; saveSettings(); applyLang(); buildThemeGrid(); });
+$("bgSwatches").addEventListener("click", e=>{ const b = e.target.closest("[data-bgset]"); if(!b) return; settings.bg = b.dataset.bgset; saveSettings(); syncSettingsUI(); });
+$("soundBtn").addEventListener("click", ()=> setSound(!settings.sound));
+$("settingsBtn").addEventListener("click", ()=>{ GameAudio.unlock(); GameAudio.tap(); $("themePicker").classList.remove("open"); $("settingsPanel").classList.add("open"); });
+$("settingsBack").addEventListener("click", ()=>{ GameAudio.tap(); $("settingsPanel").classList.remove("open"); });
+$("settingsDone").addEventListener("click", ()=>{ $("settingsPanel").classList.remove("open"); startRound(false); });
+$("themeSummary").addEventListener("click", ()=>{ GameAudio.tap(); openThemePicker(); });
+$("themeBack").addEventListener("click", ()=> $("themePicker").classList.remove("open"));
+$("themePrev").addEventListener("click", ()=>{ if (pickerPage > 0) { pickerPage--; buildThemeGrid(); } });
+$("themeNext").addEventListener("click", ()=>{ if (pickerPage < PICKER_PAGES.length - 1) { pickerPage++; buildThemeGrid(); } });
+$("againBtn").addEventListener("click", ()=> startRound(false));
+$("newSetBtn").addEventListener("click", ()=> startRound(true));
+window.addEventListener("resize", sizeCells);
+/* 全局禁缩放（与 0 号一致）：手势缩放与双击缩放一律拦下 */
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("dblclick", e => e.preventDefault(), { passive:false });
+document.addEventListener("pointerdown", ()=> GameAudio.unlock(), { once:true });
+
+/* ===== 启动：打开直达游戏 ===== */
+(function init(){
+  const mascot = ASSETS.find(a=>a.id==="rabbit");
+  if (mascot && mascot.svg) $("mascotArt").innerHTML = mascot.svg;
+  GameAudio.setEnabled(settings.sound);
+  applyLang();
+  resolveRound();
+  startRound(false);
+})();
+</script>
+</body>
+</html>
