@@ -1,0 +1,35 @@
+name: 自动更新导航主页
+
+on:
+  push:
+    branches:
+      - main   # 如果你的默认分支是 master，请把这里改成 master
+    paths:
+      - '**.html'
+      - 'preupload.py'
+      - '!index.html'  # 忽略脚本自身提交引发的循环触发
+
+permissions:
+  contents: write  # 赋予脚本自动提交更新的权限
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 运行脚本更新 index.html
+        run: python preupload.py
+
+      - name: 提交并推送更新
+        run: |
+          git config --local user.email "github-actions[bot]@://github.com"
+          git config --local user.name "github-actions[bot]"
+          git add index.html
+          git diff --staged --quiet || (git commit -m "chore: 自动更新导航列表" && git push)
