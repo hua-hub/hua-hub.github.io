@@ -129,6 +129,21 @@
   .turn-banner .tb-avatar{ width:30px; height:30px; flex:0 0 auto; border-radius:50%; background:rgba(255,255,255,.28); color:#fff; font-size:15px; font-weight:900; display:flex; align-items:center; justify-content:center; border:2px solid rgba(255,255,255,.8); }
   @media (orientation:landscape) and (max-height:500px){ .turn-banner{ top:calc(env(safe-area-inset-top) + 84px); font-size:15px; } }
 
+  /* 换人背景色调层：平滑过渡到当前玩家颜色（低饱和，不影响牌面可读） */
+  #turnTint{ position:fixed; inset:0; z-index:-1; pointer-events:none; background:transparent; transition:background-color .6s ease; }
+  /* 本局主题中央大横幅：只报主题，non-blocking，约 1.8 秒淡出 */
+  #themeBanner{ position:fixed; left:50%; top:50%; z-index:44; transform:translate(-50%,-50%) scale(.85); pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:1px; background:var(--panel); border:1px solid var(--panel-line); border-radius:22px; padding:14px 34px 12px; box-shadow:var(--shadow); backdrop-filter:blur(8px); opacity:0; transition:opacity .3s ease, transform .3s ease; max-width:92vw; text-align:center; }
+  #themeBanner.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  #themeBanner .th-icon{ font-size:60px; line-height:1.15; }
+  #themeBanner .th-name{ font-size:28px; font-weight:900; letter-spacing:.05em; }
+  #themeBanner .th-sub{ font-size:12.5px; font-weight:700; color:var(--ink-soft); letter-spacing:.14em; }
+  /* 未配对快速盖回 */
+  .card.fastback .inner{ transition:transform .2s ease; }
+  /* 记忆地图（助手 E）：见过的牌在牌背半透明显示图案 */
+  .face.back .mapg{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:38cqw; font-weight:900; opacity:0; transition:opacity .3s; pointer-events:none; text-shadow:0 1px 6px rgba(0,0,0,.35); }
+  .board.map-on .card.seen .face.back .mapg{ opacity:.55; }
+  .board.map-on .face.back .foot{ display:none; }
+
   .table{ flex:1 1 auto; min-height:0; margin-top:6px; display:flex; align-items:center; justify-content:center; touch-action:none; }
   .board{ display:grid; margin:0 auto; touch-action:none; }
   .card{ position:relative; aspect-ratio:.84; border:0; padding:0; background:transparent; perspective:700px; min-height:0; border-radius:14px; container-type:inline-size; touch-action:manipulation; user-select:none; -webkit-user-select:none; }
@@ -170,7 +185,7 @@
   @container (max-width:66px){ .face.front .glyph{ font-size:62cqw; } .face.front .lbl{ font-size:11.5cqw; margin-top:0; } .face.back .hint{ display:none; } }
   .card:not(.flipped):not(.matched):active .inner{ transform:scale(.96); }
   .card.matched{ pointer-events:none; }
-  .card.matched .face.front{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(233,161,59,.55), var(--card-shadow); }
+  .card.matched .face.front{ border-color:var(--oc, var(--gold)); box-shadow:0 0 0 3px color-mix(in srgb, var(--oc, #e9a13b) 55%, transparent), var(--card-shadow); }
   .card.matched .badge{ position:absolute; top:5px; right:5px; z-index:2; width:20px; height:20px; border-radius:50%; background:var(--gold); color:#fff; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,.25); }
   @media (prefers-reduced-motion: no-preference){
     .card.matched .inner{ animation:pop .45s ease; }
@@ -181,13 +196,27 @@
     @keyframes shake{ 0%,100%{ transform:rotateY(180deg) translateX(0);} 25%{ transform:rotateY(180deg) translateX(-5px);} 75%{ transform:rotateY(180deg) translateX(5px);} }
   }
   .card:disabled{ cursor:default; }
+  /* 持续柔光（特效「持续柔光余韵」开关）：配对成功的牌整局保持玩家颜色光晕呼吸 + 小星星间歇闪烁，强度克制不遮图案 */
+  .card.matched.glow-on .face.front{ box-shadow:0 0 0 3px color-mix(in srgb, var(--oc, #e9a13b) 55%, transparent), 0 0 18px 5px color-mix(in srgb, var(--oc, #e9a13b) 38%, transparent), var(--card-shadow); }
+  @media (prefers-reduced-motion: no-preference){
+    .card.matched.glow-on .face.front{ animation:matchGlow 3.2s ease-in-out infinite; }
+    @keyframes matchGlow{
+      0%,100%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--oc, #e9a13b) 45%, transparent), 0 0 10px 2px color-mix(in srgb, var(--oc, #e9a13b) 26%, transparent), var(--card-shadow); }
+      50%{ box-shadow:0 0 0 3px color-mix(in srgb, var(--oc, #e9a13b) 72%, transparent), 0 0 26px 9px color-mix(in srgb, var(--oc, #e9a13b) 50%, transparent), var(--card-shadow); }
+    }
+    .card.matched.glow-on .face.front::before,
+    .card.matched.glow-on .face.front::after{ position:absolute; z-index:1; color:#fff; text-shadow:0 0 7px rgba(255,190,40,.95), 0 0 3px rgba(255,190,40,.9); pointer-events:none; animation:matchTwinkle 2.6s ease-in-out infinite; }
+    .card.matched.glow-on .face.front::before{ content:"✦"; top:5%; left:8%; font-size:16cqw; }
+    .card.matched.glow-on .face.front::after{ content:"✧"; bottom:6%; right:9%; font-size:13cqw; animation-delay:1.3s; }
+    @keyframes matchTwinkle{ 0%,100%{ opacity:0; transform:scale(.5) rotate(0deg); } 50%{ opacity:.95; transform:scale(1.15) rotate(24deg); } }
+  }
 
   /* 特效层 / 吉祥物 / 飞星 */
   #fxLayer{ position:fixed; inset:0; z-index:46; pointer-events:none; overflow:hidden; }
-  .fx-p{ position:absolute; font-size:30px; line-height:1; pointer-events:none; will-change:transform,opacity; }
-  .fx-star{ position:fixed; z-index:47; font-size:38px; pointer-events:none; will-change:transform,opacity; text-shadow:0 2px 10px rgba(220,150,20,.65); }
-  .fx-fountain{ position:absolute; font-size:34px; line-height:1; pointer-events:none; will-change:transform,opacity; }
-  .fx-ribbon{ position:absolute; top:-4vh; width:13px; height:19vh; min-height:90px; border-radius:7px; pointer-events:none; will-change:transform,opacity; opacity:.92; }
+  .fx-p{ position:absolute; font-size:42px; line-height:1; pointer-events:none; will-change:transform,opacity; }
+  .fx-star{ position:fixed; z-index:47; font-size:44px; pointer-events:none; will-change:transform,opacity; text-shadow:0 2px 10px rgba(220,150,20,.65); }
+  .fx-fountain{ position:absolute; font-size:46px; line-height:1; pointer-events:none; will-change:transform,opacity; }
+  .fx-ribbon{ position:absolute; top:-4vh; width:16px; height:19vh; min-height:90px; border-radius:7px; pointer-events:none; will-change:transform,opacity; opacity:.92; }
   #bigWord{ position:fixed; left:50%; top:38%; z-index:47; transform:translate(-50%,-50%); pointer-events:none; font-size:min(17vw,84px); font-weight:900; letter-spacing:.04em; white-space:nowrap; opacity:0; text-shadow:0 4px 0 rgba(255,255,255,.85), 0 10px 28px rgba(120,40,0,.4); }
   .mascot{ position:fixed; right:calc(10px + env(safe-area-inset-right)); bottom:calc(12px + env(safe-area-inset-bottom)); z-index:45; pointer-events:none; display:flex; align-items:flex-end; gap:6px; opacity:0; transform:translateY(14px); transition:opacity .25s, transform .25s; }
   .mascot.show{ opacity:1; transform:translateY(0); }
@@ -210,8 +239,8 @@
   .setup-sheet{ display:flex; flex-direction:column; height:min(92dvh, 720px); max-height:92dvh; overflow:hidden; padding:14px 16px calc(12px + env(safe-area-inset-bottom)); }
   @media (min-width:640px){ .setup-sheet{ height:min(88dvh, 720px); } }
   .setup-sheet h2{ margin:0 0 10px; font-size:21px; }
-  .tabs{ flex:0 0 auto; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px; }
-  .tabs button{ border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); border-radius:12px; padding:7px 2px; font-size:13.5px; font-weight:800; min-height:40px; }
+  .tabs{ flex:0 0 auto; display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-bottom:10px; }
+  .tabs button{ border:2px solid var(--panel-line); background:var(--chip); color:var(--ink); border-radius:12px; padding:7px 1px; font-size:12px; font-weight:800; min-height:40px; }
   .tabs button.sel{ border-color:var(--gold); background:rgba(233,161,59,.18); }
   .tab-panels{ flex:1 1 auto; min-height:0; overflow:hidden; position:relative; }
   .tab-panel{ position:absolute; inset:0; overflow:hidden; display:flex; flex-direction:column; gap:9px; }
@@ -254,6 +283,14 @@
     #panel-kids .switch-row{ min-height:38px; padding:4px 10px; }
     #panel-kids .seg.tight button{ min-height:32px; }
     #panel-kids .group > .glabel{ margin-bottom:3px; }
+    #panel-fx{ gap:6px; }
+    #panel-fx .group > .glabel{ margin-bottom:3px; }
+  }
+  @media (max-height:560px){
+    #panel-fx .switch-grid{ grid-template-columns:repeat(3,1fr); gap:4px; }
+    #panel-fx .switch-grid .switch-row{ min-height:30px; padding:2px 6px; }
+    #panel-fx .switch-grid .sw-txt b{ font-size:11px; }
+    #panel-fx .ghost{ min-height:34px; }
   }
   /* 预览滑杆 */
   .slider-row{ display:flex; align-items:center; gap:10px; background:var(--chip); border:1px solid var(--panel-line); border-radius:12px; padding:8px 12px; }
@@ -304,6 +341,8 @@
   @media (prefers-reduced-motion: no-preference){
     .fx-demo-card.pop{ animation:demopop .85s ease; }
     @keyframes demopop{ 0%{ transform:scale(1);} 30%{ transform:scale(1.42) rotate(-4deg);} 55%{ transform:scale(1.24) rotate(4deg);} 75%{ transform:scale(1.34) rotate(-2deg);} 100%{ transform:scale(1);} }
+    .fx-demo-card.glow{ animation:demoGlow 3.2s ease-in-out infinite; }
+    @keyframes demoGlow{ 0%,100%{ box-shadow:0 14px 34px rgba(60,30,5,.35), 0 0 0 4px rgba(233,161,59,.35), 0 0 12px 3px rgba(233,161,59,.3); } 50%{ box-shadow:0 14px 34px rgba(60,30,5,.35), 0 0 0 4px rgba(233,161,59,.6), 0 0 30px 10px rgba(233,161,59,.55); } }
   }
   .fx-stage-hint{ background:rgba(30,38,44,.85); color:#fff8ea; font-size:13px; font-weight:700; padding:7px 16px; border-radius:999px; }
   body.fx-previewing #fxLayer{ z-index:101; }
@@ -343,6 +382,7 @@
 <div class="orb a" aria-hidden="true"></div>
 <div class="orb b" aria-hidden="true"></div>
 <div class="orb c" aria-hidden="true"></div>
+<div id="turnTint" aria-hidden="true"></div>
 
 <div class="wrap">
  <div class="stage">
@@ -381,6 +421,12 @@
   <span><span id="tbPrefix">换</span> <span id="tbName"></span> <span id="tbSuffix">翻</span></span>
 </div>
 
+<div id="themeBanner" hidden aria-hidden="true">
+  <span class="th-sub" data-i18n="themeBannerLbl">本 局 主 题</span>
+  <span class="th-icon" id="themeIcon">🎴</span>
+  <span class="th-name" id="themeName"></span>
+</div>
+
 <div id="fxLayer" aria-hidden="true"></div>
 <div id="bigWord" hidden aria-hidden="true"></div>
 <div class="mascot" id="mascot" hidden aria-hidden="true">
@@ -410,6 +456,7 @@
       <button type="button" role="tab" data-tab="game" class="sel" id="tabBtn-game">🎮 对局</button>
       <button type="button" role="tab" data-tab="look" id="tabBtn-look">🎨 外观</button>
       <button type="button" role="tab" data-tab="kids" id="tabBtn-kids">🧒 小孩模式</button>
+      <button type="button" role="tab" data-tab="fx" id="tabBtn-fx">✨ 特效</button>
       <button type="button" role="tab" data-tab="sound" id="tabBtn-sound">🔊 声音</button>
     </div>
 
@@ -491,11 +538,22 @@
         <div class="group">
           <div class="glabel" data-i18n="helper">翻 牌 助 手</div>
           <div class="seg c3 tight" id="segHelper">
+            <button type="button" data-v="0"><span class="hn">0 无助手</span><small class="hd">什么都不提示</small></button>
             <button type="button" data-v="A"><span class="hn">A 足迹</span><small class="hd">翻过的牌留记号</small></button>
             <button type="button" data-v="B"><span class="hn">B 足迹+提示</span><small class="hd">想 2 秒后发光提示</small></button>
             <button type="button" data-v="C"><span class="hn">C 强指引</span><small class="hd">立刻指出配对</small></button>
+            <button type="button" data-v="D"><span class="hn">D 主动推荐</span><small class="hd">有已知配对就发光推荐</small></button>
+            <button type="button" data-v="E"><span class="hn">E 记忆地图</span><small class="hd">牌背显示翻到过的图案</small></button>
           </div>
         </div>
+        <div class="switch-grid">
+          <div class="switch-row"><div class="sw-txt"><b data-i18n="voice">语音夸奖</b></div><button class="switch" type="button" id="swVoice" aria-pressed="false" aria-label="Voice praise"></button></div>
+          <div class="switch-row"><div class="sw-txt"><b data-i18n="collect">🧺 配对收集带</b></div><button class="switch" type="button" id="swCollect" aria-pressed="true" aria-label="Collection strip"></button></div>
+        </div>
+      </section>
+
+      <!-- 特效：与小孩模式解耦，普通/小孩模式都可自由开关 -->
+      <section class="tab-panel" id="panel-fx" role="tabpanel" hidden>
         <div class="group">
           <div class="glabel" data-i18n="fxTitle">成 功 特 效</div>
           <div class="switch-grid" id="fxGrid">
@@ -508,11 +566,9 @@
             <div class="switch-row"><div class="sw-txt"><b data-fx="fxBigWord">📣 大字夸奖</b></div><button class="switch fx-sw" type="button" data-k="fxBigWord" aria-pressed="true"></button></div>
             <div class="switch-row"><div class="sw-txt"><b data-fx="fxFountain">⛲ 表情喷泉</b></div><button class="switch fx-sw" type="button" data-k="fxFountain" aria-pressed="true"></button></div>
             <div class="switch-row"><div class="sw-txt"><b data-fx="fxRibbons">🎀 全屏彩带</b></div><button class="switch fx-sw" type="button" data-k="fxRibbons" aria-pressed="true"></button></div>
+            <div class="switch-row"><div class="sw-txt"><b data-fx="fxTurnBg">🔄 换人背景变色</b></div><button class="switch fx-sw" type="button" data-k="fxTurnBg" aria-pressed="true"></button></div>
+            <div class="switch-row"><div class="sw-txt"><b data-fx="fxGlow">🌟 持续柔光余韵</b></div><button class="switch fx-sw" type="button" data-k="fxGlow" aria-pressed="true"></button></div>
           </div>
-        </div>
-        <div class="switch-grid">
-          <div class="switch-row"><div class="sw-txt"><b data-i18n="voice">语音夸奖</b></div><button class="switch" type="button" id="swVoice" aria-pressed="false" aria-label="Voice praise"></button></div>
-          <div class="switch-row"><div class="sw-txt"><b data-i18n="collect">🧺 配对收集带</b></div><button class="switch" type="button" id="swCollect" aria-pressed="true" aria-label="Collection strip"></button></div>
         </div>
         <button class="ghost" type="button" id="btnFxPreview" style="margin-top:0; min-height:44px;" data-i18n="fxPreview">✨ 特效预览</button>
       </section>
@@ -585,18 +641,18 @@
   /* ---------------- 国际化 ---------------- */
   var STR = {
     zh: {
-      tabGame:"🎮 对局", tabLook:"🎨 外观", tabKids:"🧒 小孩模式", tabSound:"🔊 声音",
+      tabGame:"🎮 对局", tabLook:"🎨 外观", tabKids:"🧒 小孩模式", tabFx:"✨ 特效", tabSound:"🔊 声音",
       players:"玩 家 人 数", names:"玩 家 名 字", difficulty:"难 度", preview:"开 局 预 览",
       theme:"牌 面 主 题", back:"牌 背 图 案", language:"语 言 / Language",
       changeLbl:"更换", themePick:"选择牌面主题", backPick:"选择牌背图案", fxHint:"✨ 特效预览中 · 点任意处结束",
-      randomLbl:"🎲 随机", drawnMsg:"本局主题：{theme} · 牌背：{back}",
+      randomLbl:"🎲 随机", themeBannerLbl:"本 局 主 题",
       bigWords:["太棒了！","找到了！","好厉害！","配对成功！","你真棒！"],
       kidsMode:"小孩模式", kidsModeDesc:"星星计分 · 无计时 · 失败不惩罚，几个人都生效",
       helper:"翻 牌 助 手",
-      helperA:"A 足迹", helperAD:"翻过的牌留记号", helperB:"B 足迹+提示", helperBD:"想 2 秒后发光提示", helperC:"C 强指引", helperCD:"立刻指出配对",
+      helper0:"0 无助手", helper0D:"什么都不提示", helperA:"A 足迹", helperAD:"翻过的牌留记号", helperB:"B 足迹+提示", helperBD:"想 2 秒后发光提示", helperC:"C 强指引", helperCD:"立刻指出配对", helperD:"D 主动推荐", helperDD:"有已知配对就发光推荐", helperE:"E 记忆地图", helperED:"牌背显示翻到过的图案",
       fxTitle:"成 功 特 效",
       fxBurst:"🎆 定点撒花", fxBounce:"🃏 牌面弹跳", fxArp:"🎵 开心音阶", fxStarFly:"⭐ 星星飞入记分", fxMascot:"🦊 吉祥物鼓励", fxFireworks:"🎇 连对小烟花",
-      fxBigWord:"📣 大字夸奖", fxFountain:"⛲ 表情喷泉", fxRibbons:"🎀 全屏彩带", fxPreview:"✨ 特效预览",
+      fxBigWord:"📣 大字夸奖", fxFountain:"⛲ 表情喷泉", fxRibbons:"🎀 全屏彩带", fxTurnBg:"🔄 换人背景变色", fxGlow:"🌟 持续柔光余韵", fxPreview:"✨ 特效预览",
       voice:"语音夸奖", voiceDesc:"配对时朗读夸奖语（默认关）", collect:"🧺 配对收集带",
       soundFx:"音效", soundFxDesc:"翻牌、配对、胜利的合成音效",
       vibrate:"震动", vibrateDesc:"配对与换人时轻震（iPhone 网页不支持，安卓有效）",
@@ -633,18 +689,18 @@
       mascotSay:["太棒了！🎉","找到了！","你真厉害！","继续加油！","记性超好！","就是它！"]
     },
     en: {
-      tabGame:"🎮 Game", tabLook:"🎨 Look", tabKids:"🧒 Kids", tabSound:"🔊 Sound",
+      tabGame:"🎮 Game", tabLook:"🎨 Look", tabKids:"🧒 Kids", tabFx:"✨ Effects", tabSound:"🔊 Sound",
       players:"P L A Y E R S", names:"P L A Y E R  N A M E S", difficulty:"D I F F I C U L T Y", preview:"P R E V I E W",
       theme:"CARD THEME", back:"CARD BACK", language:"语 言 / Language",
       changeLbl:"Change", themePick:"Choose Card Theme", backPick:"Choose Card Back", fxHint:"✨ Previewing effects · tap anywhere to end",
-      randomLbl:"🎲 Random", drawnMsg:"This game: {theme} · Back: {back}",
+      randomLbl:"🎲 Random", themeBannerLbl:"THIS GAME'S THEME",
       bigWords:["Great!","You found it!","Awesome!","It's a match!","Super!"],
       kidsMode:"Kids Mode", kidsModeDesc:"Stars instead of points · no timer · no penalty sounds, for any player count",
       helper:"MEMORY HELPER",
-      helperA:"A Footprints", helperAD:"Seen cards leave a mark", helperB:"B + Delayed hint", helperBD:"Mate glows after 2s of thinking", helperC:"C Strong guide", helperCD:"Points to the mate right away",
+      helper0:"0 Off", helper0D:"No help at all", helperA:"A Footprints", helperAD:"Seen cards leave a mark", helperB:"B + Delayed hint", helperBD:"Mate glows after 2s of thinking", helperC:"C Strong guide", helperCD:"Points to the mate right away", helperD:"D Proactive", helperDD:"Glows a known pair for you", helperE:"E Memory map", helperED:"Seen pictures shown on card backs",
       fxTitle:"MATCH EFFECTS",
       fxBurst:"🎆 Burst confetti", fxBounce:"🃏 Card bounce", fxArp:"🎵 Happy arpeggio", fxStarFly:"⭐ Star flies to score", fxMascot:"🦊 Mascot cheers", fxFireworks:"🎇 Streak fireworks",
-      fxBigWord:"📣 Big praise word", fxFountain:"⛲ Emoji fountain", fxRibbons:"🎀 Full-screen ribbons", fxPreview:"✨ Preview Effects",
+      fxBigWord:"📣 Big praise word", fxFountain:"⛲ Emoji fountain", fxRibbons:"🎀 Full-screen ribbons", fxTurnBg:"🔄 Turn background tint", fxGlow:"🌟 Lasting glow & star rain", fxPreview:"✨ Preview Effects",
       voice:"Voice Praise", voiceDesc:"Reads a praise line aloud on a match (off by default)", collect:"🧺 Collection Strip",
       soundFx:"Sound Effects", soundFxDesc:"Synth sounds for flips, matches and winning",
       vibrate:"Vibration", vibrateDesc:"Gentle buzz on match and turn change (not supported on iPhone web, works on Android)",
@@ -756,7 +812,7 @@
   var PCOLORS = ["var(--p1)","var(--p2)","var(--p3)","var(--p4)"];
   var PCOLOR_HEX = ["#ef5d3a","#0e9594","#e9a13b","#7c5cbf"];
   var DEF_NAMES = { zh:["小红","小青","小阳","小紫"], en:["Ruby","Teal","Sunny","Violet"] };
-  var FX_KEYS = ["fxBurst","fxBounce","fxArp","fxStarFly","fxMascot","fxFireworks","fxBigWord","fxFountain","fxRibbons"];
+  var FX_KEYS = ["fxBurst","fxBounce","fxArp","fxStarFly","fxMascot","fxFireworks","fxBigWord","fxFountain","fxRibbons","fxTurnBg","fxGlow"];
 
   /* ---------------- 设置（持久化） ---------------- */
   var SETTINGS_KEY = "memoryFlip.settings.v4";
@@ -764,7 +820,7 @@
     players:2, theme:"random", back:"random", diff:"classic", previewSec:3,
     lang:"zh", kids:false, helper:"B",
     fxBurst:true, fxBounce:true, fxArp:true, fxStarFly:true, fxMascot:true, fxFireworks:true,
-    fxBigWord:true, fxFountain:true, fxRibbons:true,
+    fxBigWord:true, fxFountain:true, fxRibbons:true, fxTurnBg:true, fxGlow:true,
     voice:false, collect:true, soundOn:true, vibrateOn:true, names:["","","",""]
   };
   try{
@@ -863,7 +919,7 @@
     var btn = e.target.closest("button[data-tab]"); if(!btn) return;
     var name = btn.getAttribute("data-tab");
     this.querySelectorAll("button").forEach(function(b){ b.classList.toggle("sel", b === btn); });
-    ["game","look","kids","sound"].forEach(function(n){ $("panel-" + n).hidden = n !== name; });
+    ["game","look","kids","fx","sound"].forEach(function(n){ $("panel-" + n).hidden = n !== name; });
     sfx("flip");
   });
 
@@ -1040,7 +1096,7 @@
       if(t[key]) el.textContent = t[key];
     });
     $("tabBtn-game").textContent = t.tabGame; $("tabBtn-look").textContent = t.tabLook;
-    $("tabBtn-kids").textContent = t.tabKids; $("tabBtn-sound").textContent = t.tabSound;
+    $("tabBtn-kids").textContent = t.tabKids; $("tabBtn-fx").textContent = t.tabFx; $("tabBtn-sound").textContent = t.tabSound;
     document.querySelectorAll("#segDiff button").forEach(function(b){
       var dn = b.querySelector(".dn"); if(dn) dn.textContent = t.diffNames[b.getAttribute("data-v")];
     });
@@ -1065,10 +1121,43 @@
     if(gameActive) renderScoreboard();
   }
 
+  /* ---------------- 本局主题横幅 / 换人背景色调 ---------------- */
+  var themeBannerTimer = null;
+  function showThemeBanner(){
+    var m = themeMeta(gameTheme);
+    $("themeIcon").textContent = m ? m[1] : "🎴";
+    $("themeName").textContent = themeName(gameTheme);
+    var el = $("themeBanner");
+    el.hidden = false;
+    void el.offsetWidth;
+    el.classList.add("show");
+    clearTimeout(themeBannerTimer);
+    themeBannerTimer = setTimeout(hideThemeBanner, 1800);
+  }
+  function hideThemeBanner(){
+    clearTimeout(themeBannerTimer);
+    var el = $("themeBanner");
+    if(!el || el.hidden) return;
+    el.classList.remove("show");
+    setTimeout(function(){ el.hidden = true; }, 320);
+  }
+  function setTurnTint(){
+    var el = $("turnTint");
+    if(!el) return;
+    if(players.length > 1 && settings.fxTurnBg && players[current]){
+      el.style.background = hexA(players[current].hex, .20);
+    } else {
+      el.style.background = "transparent";
+    }
+  }
+
   /* ---------------- 对局 ---------------- */
   function startGame(){
     endPreview(true);
     hideTurnBanner();
+    hideThemeBanner();
+    if(missState){ clearTimeout(missState.timer); missState = null; }
+    if(starRainTimer){ clearInterval(starRainTimer); starRainTimer = null; }
     clearHint();
     unlockVoice();
     players = [];
@@ -1106,13 +1195,16 @@
     renderBoard(d);
     requestAnimationFrame(fitBoard);
     updateTurnbar(T().flipTwo);
-    if(settings.theme === "random" || settings.back === "random"){
-      toast(tpl(T().drawnMsg, { theme: themeName(gameTheme), back: backName(gameBack) }), 2400);
-    }
+    showThemeBanner();
+    setTurnTint();
     if(settings.previewSec > 0){ runPreview(); }
+    else { turnStartRecommend(); }
   }
 
-  function colsFor(d){ return window.innerWidth < 600 ? d.mcols : d.cols; }
+  function colsFor(d){
+    /* 按宽高比选列数：横屏用桌面列数，竖屏用竖屏列数，旋转后立即切换 */
+    return window.innerWidth >= window.innerHeight ? d.cols : d.mcols;
+  }
   function fitBoard(){
     if(!deck.length) return;
     var d = DIFFS[settings.diff];
@@ -1133,6 +1225,7 @@
 
   function renderBoard(d){
     boardEl.innerHTML = "";
+    boardEl.classList.toggle("map-on", settings.kids && settings.helper === "E");
     deck.forEach(function(card, i){
       var btn = document.createElement("button");
       btn.type = "button"; btn.className = "card";
@@ -1141,7 +1234,7 @@
       btn.dataset.pos = i;
       btn.innerHTML =
         '<span class="inner">'
-        + '<span class="face back pat-' + gameBack + '">' + BACK_ART[gameBack] + '<span class="foot" aria-hidden="true">👣</span><span class="hint">MEMORY</span></span>'
+        + '<span class="face back pat-' + gameBack + '">' + BACK_ART[gameBack] + '<span class="mapg" aria-hidden="true">' + card.glyph + '</span><span class="foot" aria-hidden="true">👣</span><span class="hint">MEMORY</span></span>'
         + '<span class="face front" style="background:linear-gradient(160deg, hsl(' + card.hue + ',85%,93%), hsl(' + card.hue + ',78%,84%))">'
         + '<span class="glyph' + (/^[0-9A-Za-z]+$/.test(card.glyph) ? (card.glyph.length > 1 ? " txt2" : " txt") : "") + '">' + (card.glyph && card.glyph.trim() ? card.glyph : "🎴") + '</span>'
         + '<span class="lbl">' + escapeHtml(card.label) + '</span></span>'
@@ -1178,10 +1271,19 @@
       if(!gameActive) return;
       lock = false;
       updateTurnbar(T().yourTurn);
+      turnStartRecommend();
       toast(tpl(T().firstMove, { name: players[current].name }));
     }, 480);
   }
   boardEl.addEventListener("click", function(){ if(previewState) endPreview(false); });
+  /* 未配对锁定期间的点按快进：捕获阶段拦截并吞掉这次点击——停留期点按立即快速盖回，盖回途中点按立即完成换人，都不会误翻新牌 */
+  boardEl.addEventListener("click", function(e){
+    if(missState){
+      e.stopPropagation(); e.preventDefault();
+      if(missState.phase === "stay") finishMiss(true);
+      else completeMiss();
+    }
+  }, true);
 
   function renderScoreboard(){
     scoreEl.innerHTML = "";
@@ -1229,15 +1331,47 @@
     clearTimeout(hintTimer); hintTimer = null;
     boardEl.querySelectorAll(".hint-glow").forEach(function(c){ c.classList.remove("hint-glow"); });
   }
+  function findKnownPair(excludeBtn){
+    var byKey = {};
+    var found = null;
+    boardEl.querySelectorAll(".card").forEach(function(c){
+      if(c === excludeBtn || c.classList.contains("matched") || c.classList.contains("flipped")) return;
+      if(!seenPos[c.dataset.pos]) return;
+      var k = c.dataset.key;
+      if(byKey[k]){ if(!found) found = [byKey[k], c]; }
+      else byKey[k] = c;
+    });
+    return found;
+  }
+  function recommendGlow(firstBtn, firstCard){
+    /* D 档：优先发光第一张的已知配对，否则推荐任意一对已知配对中的一张 */
+    var mate = null;
+    boardEl.querySelectorAll(".card").forEach(function(c){
+      if(c !== firstBtn && parseInt(c.dataset.key,10) === firstCard.key && !c.classList.contains("matched") && !c.classList.contains("flipped") && seenPos[c.dataset.pos]) mate = c;
+    });
+    if(mate){ mate.classList.add("hint-glow"); return; }
+    var pair = findKnownPair(firstBtn);
+    if(pair) pair[0].classList.add("hint-glow");
+  }
+  function turnStartRecommend(){
+    /* D 档：回合开始时若已有双方都被翻到过的配对，主动发光推荐一张 */
+    if(!settings.kids || settings.helper !== "D" || !gameActive || lock || previewState) return;
+    if(openCards.length) return;
+    var pair = findKnownPair(null);
+    if(pair) pair[0].classList.add("hint-glow");
+  }
   function maybeHint(firstBtn, firstCard){
-    if(!settings.kids || settings.helper === "A") return;
+    if(!settings.kids) return;
+    var h = settings.helper;
+    if(h === "0" || h === "A" || h === "E") return; /* 0 无助手 / A 只有足迹 / E 只有记忆地图 */
+    if(h === "D"){ recommendGlow(firstBtn, firstCard); return; }
     var mate = null;
     boardEl.querySelectorAll(".card").forEach(function(c){
       if(c !== firstBtn && parseInt(c.dataset.key,10) === firstCard.key && !c.classList.contains("matched")) mate = c;
     });
     if(!mate) return;
     if(!seenPos[mate.dataset.pos]) return; /* 配对牌没被翻到过，不提示 */
-    if(settings.helper === "C"){
+    if(h === "C"){
       mate.classList.add("hint-glow");
     } else { /* B：2 秒无动作才提示 */
       hintTimer = setTimeout(function(){
@@ -1255,7 +1389,8 @@
     btn.classList.add("flipped");
     btn.setAttribute("aria-label", card.label);
     seenPos[btn.dataset.pos] = true;
-    if(settings.kids) btn.classList.add("seen");
+    if(settings.kids && settings.helper !== "0") btn.classList.add("seen");
+    if(openCards.length === 0) clearHint();
     openCards.push({ btn:btn, card:card });
     players[current].flips++; totalFlips++;
     if(openCards.length === 1){ maybeHint(btn, card); renderScoreboard(); return; }
@@ -1264,17 +1399,17 @@
     var a = openCards[0], b = openCards[1];
     openCards = [];
     if(a.card.key === b.card.key){ setTimeout(function(){ onMatch(a, b); }, 380); }
-    else { setTimeout(function(){ onMiss(a, b); }, 950); }
+    else { scheduleMiss(a, b); }
     renderScoreboard();
   }
 
-  /* ---------------- 特效（全部 non-blocking，≤0.8s） ---------------- */
+  /* ---------------- 特效（全部 non-blocking、pointer-events:none，爆发类时长约 4.5–5 秒缓缓飘落，与翻牌并行不等待） ---------------- */
   function spawnBurst(el){
     var layer = $("fxLayer");
     var r = el.getBoundingClientRect();
     var cx = r.left + r.width/2, cy = r.top + r.height/2;
     var glyphs = ["✿","⭐","❀","✦","💮","🌸","✨"];
-    for(var i=0;i<18;i++){
+    for(var i=0;i<30;i++){
       (function(i){
         var s = document.createElement("span");
         s.className = "fx-p";
@@ -1282,18 +1417,21 @@
         s.style.left = cx + "px"; s.style.top = cy + "px";
         s.style.color = ["#ff5e7a","#ffb84d","#3fae9f","#7c5cbf"][i % 4];
         layer.appendChild(s);
-        var ang = (i / 18) * Math.PI * 2 + Math.random() * 0.5;
-        var dist = 70 + Math.random() * 70;
-        var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 22;
+        var ang = (i / 30) * Math.PI * 2 + Math.random() * 0.5;
+        var dist = 85 + Math.random() * 95;
+        var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 26;
+        var fall = 150 + Math.random() * 110; /* 爆开后受重力缓缓飘落，约 4.6–5.4 秒才淡尽 */
+        var spin = (Math.random()*260-130);
         var anim = s.animate([
           { transform:"translate(-50%,-50%) scale(.6) rotate(0deg)", opacity:1 },
-          { transform:"translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(1.35) rotate(" + (Math.random()*200-100) + "deg)", opacity:0 }
-        ], { duration: 780, easing:"cubic-bezier(.17,.67,.35,1)" });
+          { transform:"translate(calc(-50% + " + dx + "px), calc(-50% + " + dy + "px)) scale(1.5) rotate(" + spin*0.4 + "deg)", opacity:1, offset:0.22 },
+          { transform:"translate(calc(-50% + " + dx*1.08 + "px), calc(-50% + " + (dy + fall) + "px)) scale(1.1) rotate(" + spin + "deg)", opacity:0 }
+        ], { duration: 4600 + Math.random() * 800, easing:"cubic-bezier(.17,.67,.35,1)" });
         anim.onfinish = function(){ s.remove(); };
       })(i);
     }
   }
-  /* 大字夸奖：屏幕中央超大彩字弹跳，约 0.9 秒淡出，不拦触摸 */
+  /* 大字夸奖：中央超大彩字弹跳到峰值，随后缩小上移离开棋盘中央，停留后淡出，全程约 4.6 秒，不拦触摸 */
   var bigWordTimer = null;
   function showBigWord(){
     var el = $("bigWord");
@@ -1303,36 +1441,38 @@
     try{
       el.animate([
         { opacity:0, transform:"translate(-50%,-50%) scale(.3) rotate(-5deg)" },
-        { opacity:1, transform:"translate(-50%,-50%) scale(1.18) rotate(2deg)", offset:0.35 },
-        { opacity:1, transform:"translate(-50%,-50%) scale(1) rotate(0deg)", offset:0.6 },
-        { opacity:0, transform:"translate(-50%,-58%) scale(1.05) rotate(0deg)" }
-      ], { duration: 900, easing:"ease-out" });
+        { opacity:1, transform:"translate(-50%,-50%) scale(1.18) rotate(2deg)", offset:0.13 },
+        { opacity:1, transform:"translate(-50%,-50%) scale(1) rotate(0deg)", offset:0.22 },
+        { opacity:1, transform:"translate(-50%, calc(-50% - 15vh)) scale(.78) rotate(0deg)", offset:0.45 },
+        { opacity:.95, transform:"translate(-50%, calc(-50% - 16vh)) scale(.76) rotate(0deg)", offset:0.78 },
+        { opacity:0, transform:"translate(-50%, calc(-50% - 19vh)) scale(.72) rotate(0deg)" }
+      ], { duration: 4600, easing:"ease-out" });
     }catch(e){ el.style.opacity = 1; }
     clearTimeout(bigWordTimer);
-    bigWordTimer = setTimeout(function(){ el.hidden = true; el.style.opacity = 0; }, 920);
+    bigWordTimer = setTimeout(function(){ el.hidden = true; el.style.opacity = 0; }, 4650);
   }
-  /* 表情喷泉：从配对牌向上喷出一串大号表情 */
+  /* 表情喷泉：从配对牌向上喷出大号表情，再缓缓飘落，全程约 5 秒 */
   function spawnFountain(el){
     var layer = $("fxLayer");
     var r = el.getBoundingClientRect();
     var cx = r.left + r.width/2, cy = r.top + r.height/2;
     var glyphs = ["⭐","❤️","🎈","🌸","🎉","💛","🧡","✨"];
-    for(var i=0;i<10;i++){
+    for(var i=0;i<16;i++){
       (function(i){
         var s = document.createElement("span");
         s.className = "fx-fountain";
         s.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
         s.style.left = cx + "px"; s.style.top = cy + "px";
         layer.appendChild(s);
-        var dx = (Math.random() - 0.5) * 130;
-        var up = 110 + Math.random() * 130;
-        var delay = i * 45;
+        var dx = (Math.random() - 0.5) * 170;
+        var up = 130 + Math.random() * 150;
+        var delay = i * 110;
         var anim = s.animate([
           { transform:"translate(-50%,-50%) scale(.5)", opacity:0 },
-          { transform:"translate(-50%,-50%) scale(1.1)", opacity:1, offset:0.15 },
-          { transform:"translate(calc(-50% + " + dx*0.7 + "px), calc(-50% - " + up + "px)) scale(1.15) rotate(" + (Math.random()*50-25) + "deg)", opacity:1, offset:0.55 },
-          { transform:"translate(calc(-50% + " + dx + "px), calc(-50% - " + (up*0.35) + "px)) scale(.95) rotate(" + (Math.random()*70-35) + "deg)", opacity:0 }
-        ], { duration: 820, delay: delay, easing:"cubic-bezier(.17,.67,.35,1)" });
+          { transform:"translate(-50%,-50%) scale(1.15)", opacity:1, offset:0.08 },
+          { transform:"translate(calc(-50% + " + dx*0.7 + "px), calc(-50% - " + up + "px)) scale(1.3) rotate(" + (Math.random()*50-25) + "deg)", opacity:1, offset:0.38 },
+          { transform:"translate(calc(-50% + " + dx + "px), calc(-50% + 110px)) scale(1) rotate(" + (Math.random()*90-45) + "deg)", opacity:0 }
+        ], { duration: 4700 + Math.random() * 500, delay: delay, easing:"cubic-bezier(.17,.67,.35,1)" });
         anim.onfinish = function(){ s.remove(); };
       })(i);
     }
@@ -1342,7 +1482,7 @@
     var layer = $("fxLayer");
     var colors = ["#ef5d3a","#0e9594","#e9a13b","#7c5cbf","#e56b8c","#3fae9f"];
     var W = window.innerWidth;
-    for(var i=0;i<16;i++){
+    for(var i=0;i<24;i++){
       (function(i){
         var s = document.createElement("span");
         s.className = "fx-ribbon";
@@ -1357,7 +1497,7 @@
           { transform:"translate(0,-10vh) rotate(0deg)", opacity:0 },
           { opacity:.95, offset:0.12 },
           { transform:"translate(" + drift + "px," + fall + "px) rotate(" + (Math.random()*560-280) + "deg)", opacity:0 }
-        ], { duration: 1150 + Math.random() * 350, delay: Math.random() * 120, easing:"cubic-bezier(.2,.6,.4,1)" });
+        ], { duration: 4700 + Math.random() * 700, delay: Math.random() * 250, easing:"cubic-bezier(.2,.6,.4,1)" });
         anim.onfinish = function(){ s.remove(); };
       })(i);
     }
@@ -1377,11 +1517,44 @@
       { transform:"translate(0,0) scale(1)", opacity:1 },
       { transform:"translate(" + dx*0.5 + "px," + (dy*0.5 - 46) + "px) scale(1.25)", opacity:1, offset:0.55 },
       { transform:"translate(" + dx + "px," + dy + "px) scale(.55)", opacity:.85 }
-    ], { duration: 680, easing:"ease-in-out" });
+    ], { duration: 2400, easing:"ease-in-out" });
     anim.onfinish = function(){
       s.remove();
       try{ chip.animate([{ transform:"scale(1.14)" }, { transform:"scale(1.03)" }], { duration:220, easing:"ease-out" }); }catch(e){}
     };
+  }
+  /* 星星雨余韵（特效「持续柔光余韵」开关）：配对后约 5 秒内小星星缓缓飘落，密度随时间衰减 */
+  var starRainTimer = null;
+  function spawnStarRain(){
+    var layer = $("fxLayer");
+    var t0 = Date.now(), total = 5000;
+    if(starRainTimer){ clearInterval(starRainTimer); starRainTimer = null; }
+    function drop(){
+      var remain = 1 - (Date.now() - t0) / total;
+      var n = remain > 0.6 ? 3 : (remain > 0.3 ? 2 : 1);
+      for(var j=0;j<n;j++){
+        var s = document.createElement("span");
+        s.className = "fx-p";
+        s.textContent = pick(["⭐","✦","✨","🌟"]);
+        s.style.fontSize = (16 + Math.random() * 10) + "px";
+        s.style.left = (4 + Math.random() * 92) + "vw";
+        s.style.top = "-4vh";
+        layer.appendChild(s);
+        var drift = (Math.random() - 0.5) * 70;
+        var fallVh = 42 + Math.random() * 24;
+        var anim = s.animate([
+          { transform:"translate(0,0) rotate(0deg)", opacity:0 },
+          { opacity:.95, offset:0.12 },
+          { transform:"translate(" + drift + "px," + fallVh + "vh) rotate(" + (Math.random()*160-80) + "deg)", opacity:0 }
+        ], { duration: 2500 + Math.random() * 900, easing:"cubic-bezier(.3,.5,.6,1)" });
+        anim.onfinish = (function(el){ return function(){ el.remove(); }; })(s);
+      }
+    }
+    drop();
+    starRainTimer = setInterval(function(){
+      if(Date.now() - t0 >= total){ clearInterval(starRainTimer); starRainTimer = null; return; }
+      drop();
+    }, 280);
   }
   var mascotTimer = null;
   function showMascot(){
@@ -1394,7 +1567,7 @@
     mascotTimer = setTimeout(function(){
       m.classList.remove("show");
       setTimeout(function(){ m.hidden = true; }, 260);
-    }, 1500);
+    }, 5000);
   }
 
   function onMatch(a, b){
@@ -1406,24 +1579,32 @@
     else { gain = 100 + (streak - 1) * 25; p.score += gain; }
     p.pairs++;
     matchedPairs++;
+    var multi = players.length > 1;
     [a.btn, b.btn].forEach(function(btn){
       btn.classList.add("matched"); btn.disabled = true;
-      if(kids && settings.fxBounce) btn.classList.add("bigbounce");
+      if(settings.fxBounce) btn.classList.add("bigbounce");
+      if(multi) btn.style.setProperty("--oc", p.hex); /* 配对归属：整张牌描边染翻出它的玩家颜色 */
       if(!btn.querySelector(".badge")){
-        var badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "✓";
+        var badge = document.createElement("span"); badge.className = "badge";
+        if(multi){ badge.style.background = p.hex; badge.textContent = p.name.charAt(0); }
+        else badge.textContent = "✓";
         btn.appendChild(badge);
       }
     });
-    if(kids && settings.fxArp){ sfx("arp"); } else { sfx("match"); }
+    if(settings.fxArp){ sfx("arp"); } else { sfx("match"); }
     buzz(35);
+    if(settings.fxBurst){ spawnBurst(a.btn); spawnBurst(b.btn); }
+    if(settings.fxFountain){ spawnFountain(a.btn); spawnFountain(b.btn); }
+    if(settings.fxBigWord){ showBigWord(); }
+    if(settings.fxRibbons && streak >= 2){ fireRibbons(); }
+    if(settings.fxStarFly){ flyStar(a.btn, current); }
+    if(settings.fxMascot){ showMascot(); }
+    if(settings.fxGlow){ /* 持续效果：这对牌整局保持柔光闪烁 + 约 5 秒星星雨余韵 */
+      [a.btn, b.btn].forEach(function(btn){ btn.classList.add("glow-on"); });
+      spawnStarRain();
+    }
+    if(settings.fxFireworks && streak % 3 === 0){ fireConfetti(70); }
     if(kids){
-      if(settings.fxBurst){ spawnBurst(a.btn); spawnBurst(b.btn); }
-      if(settings.fxFountain){ spawnFountain(a.btn); spawnFountain(b.btn); }
-      if(settings.fxBigWord){ showBigWord(); }
-      if(settings.fxRibbons && streak >= 2){ fireRibbons(); }
-      if(settings.fxStarFly){ flyStar(a.btn, current); }
-      if(settings.fxMascot){ showMascot(); }
-      if(settings.fxFireworks && streak % 3 === 0){ fireConfetti(70); }
       var ci = document.createElement("span"); ci.textContent = a.card.glyph;
       $("collectItems").appendChild(ci);
     }
@@ -1438,18 +1619,35 @@
     lock = false;
   }
 
-  function onMiss(a, b){
+  /* 未配对节奏（恢复原值）：停留约 890ms 给玩家记位置，再以原速 480ms 盖回，总时长约 1370ms 后才换人；
+     只有着急点按才加速——点棋盘任意处立即以 200ms 快速盖回（该次点击被吞掉，不会误翻新牌） */
+  var missState = null;
+  function scheduleMiss(a, b){
     streak = 0;
     if(!settings.kids) sfx("miss"); /* 小孩模式：失败无负面音效 */
     [a.btn, b.btn].forEach(function(btn){ btn.classList.add("wrong"); });
-    setTimeout(function(){
-      [a.btn, b.btn].forEach(function(btn){
-        btn.classList.remove("flipped","wrong");
-        btn.setAttribute("aria-label", "Card " + (parseInt(btn.dataset.pos,10)+1));
-      });
-      if(players.length > 1){ showTurnBanner((current + 1) % players.length); }
-      else { updateTurnbar(T().missMsg); renderScoreboard(); lock = false; }
-    }, 420);
+    missState = { a:a, b:b, phase:"stay", timer:setTimeout(function(){ finishMiss(false); }, 890) };
+  }
+  function finishMiss(fast){
+    if(!missState || missState.phase !== "stay") return;
+    var a = missState.a, b = missState.b;
+    clearTimeout(missState.timer);
+    missState.phase = "closing";
+    [a.btn, b.btn].forEach(function(btn){
+      if(fast) btn.classList.add("fastback"); /* 点按加速才用 200ms 盖回；自然节奏走 .inner 原 .48s 过渡 */
+      btn.classList.remove("flipped","wrong");
+      btn.setAttribute("aria-label", "Card " + (parseInt(btn.dataset.pos,10)+1));
+    });
+    missState.timer = setTimeout(completeMiss, fast ? 210 : 490);
+  }
+  function completeMiss(){
+    if(!missState) return;
+    var a = missState.a, b = missState.b;
+    clearTimeout(missState.timer);
+    missState = null;
+    [a.btn, b.btn].forEach(function(btn){ btn.classList.remove("fastback"); });
+    if(players.length > 1){ showTurnBanner((current + 1) % players.length); }
+    else { updateTurnbar(T().missMsg); renderScoreboard(); lock = false; }
   }
 
   function endGame(){
@@ -1506,6 +1704,8 @@
     updateTurnbar(T().nextTurn);
     renderScoreboard();
     lock = false;
+    setTurnTint();
+    turnStartRecommend();
     buzz(30);
     var el = $("turnBanner");
     $("tbAvatar").textContent = p.name.charAt(0);
@@ -1566,19 +1766,21 @@
         ctx.fillStyle = pt.color; ctx.fillRect(-pt.w/2, -pt.h/2, pt.w, pt.h);
         ctx.restore();
       });
-      if(t < 3400){ requestAnimationFrame(frame); }
+      if(t < 6000){ requestAnimationFrame(frame); }
       else { ctx.clearRect(0,0,cv.width,cv.height); cv.hidden = true; }
     })(start);
   }
 
   /* ---------------- 按钮 ---------------- */
-  /* 特效预览：隐藏设置层，在最顶层舞台完整播放一次全套配对特效，约 1.6 秒后恢复设置（Tab 与选择状态不变） */
+  /* 特效预览：隐藏设置层，在最顶层舞台完整播放一次全套配对特效，约 5 秒后恢复设置（Tab 与选择状态不变） */
   var fxPreviewing = false, fxPreviewTimer = null;
   function endFxPreview(){
     if(!fxPreviewing) return;
     fxPreviewing = false;
     clearTimeout(fxPreviewTimer); fxPreviewTimer = null;
     $("fxStage").hidden = true;
+    $("fxDemoCardA").classList.remove("glow");
+    $("fxDemoCardB").classList.remove("glow");
     $("setupBack").classList.remove("fx-hidden");
     document.body.classList.remove("fx-previewing");
   }
@@ -1594,17 +1796,18 @@
     document.body.classList.add("fx-previewing");
     $("fxStage").hidden = false;
     var cardA = $("fxDemoCardA"), cardB = $("fxDemoCardB");
-    [cardA, cardB].forEach(function(c){ c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); });
+    [cardA, cardB].forEach(function(c){ c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop"); c.classList.add("glow"); });
     spawnBurst(cardA); spawnBurst(cardB);
     spawnFountain(cardA); spawnFountain(cardB);
     showBigWord();
     fireRibbons();
     showMascot();
+    spawnStarRain();
     flyStar(cardA, 0, $("fxDemoScore"));
-    setTimeout(function(){ $("fxDemoScoreNum").textContent = "1"; }, 700);
+    setTimeout(function(){ $("fxDemoScoreNum").textContent = "1"; }, 2450);
     if(settings.fxArp) sfx("arp"); else sfx("match");
     buzz(35);
-    fxPreviewTimer = setTimeout(endFxPreview, 1600);
+    fxPreviewTimer = setTimeout(endFxPreview, 5200);
   }
   $("btnFxPreview").addEventListener("click", playFxPreview);
   $("fxStage").addEventListener("click", endFxPreview);
@@ -1612,7 +1815,10 @@
   $("btnAgain").addEventListener("click", function(){ unlockVoice(); startGame(); });
   $("btnChange").addEventListener("click", function(){ $("endBack").hidden = true; $("setupBack").hidden = false; });
   $("btnNew").addEventListener("click", function(){
-    endPreview(true); hideTurnBanner(); clearHint(); releaseWakeLock();
+    endPreview(true); hideTurnBanner(); hideThemeBanner(); clearHint(); releaseWakeLock();
+    if(missState){ clearTimeout(missState.timer); missState = null; }
+    if(starRainTimer){ clearInterval(starRainTimer); starRainTimer = null; }
+    $("turnTint").style.background = "transparent";
     clearInterval(timerId); gameActive = false;
     $("endBack").hidden = true; $("setupBack").hidden = false;
   });
@@ -1631,10 +1837,17 @@
     if(settings.vibrateOn) buzz(30);
     toast(settings.vibrateOn ? T().vibOnToast : T().vibOffToast);
   });
-  var fitRaf = null;
+  var fitRaf = null, fitTimer = null;
   function queueFit(){ if(fitRaf) cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitBoard); }
-  window.addEventListener("resize", queueFit);
-  window.addEventListener("orientationchange", function(){ queueFit(); setTimeout(fitBoard, 120); });
+  /* 旋转/尺寸变化：立即重排 + 防抖后多次重算（等浏览器完成方向切换再量一次），对局进度不受影响 */
+  function scheduleFit(){
+    queueFit();
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(function(){ fitBoard(); setTimeout(fitBoard, 260); }, 130);
+  }
+  window.addEventListener("resize", scheduleFit);
+  window.addEventListener("orientationchange", scheduleFit);
+  if(window.visualViewport){ window.visualViewport.addEventListener("resize", scheduleFit); }
 
   /* ---------------- 初始化 ---------------- */
   markSeg("segPlayers", settings.players);
